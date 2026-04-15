@@ -1,4 +1,5 @@
 export { createEmptyCoreResult, parseCoreResult } from "./factories.js";
+export { mergeAdapterOutputs } from "./results.js";
 
 export {
   ConfidenceSchema,
@@ -51,3 +52,29 @@ export {
   type DiagnosticMeta,
   type RawToolResults
 } from "./models/core-result.js";
+
+export type { AdapterRunOutput, ToolAdapter } from "./adapters/types.js";
+
+export {
+  ProfileSchema,
+  type Profile
+} from "./profiles/schema.js";
+
+export {
+  BuiltinProfiles,
+  getBuiltinProfile,
+  listBuiltinProfiles
+} from "./profiles/builtin.js";
+
+export {
+  loadProfileFromFile,
+  requireProfile,
+  resolveProfile
+} from "./profiles/loader.js";
+
+export {
+  buildMarkdownReport,
+  renderCoreResultMarkdown
+} from "./renderers/markdown.js";
+
+export { renderCoreResultJson } from "./renderers/json.js";

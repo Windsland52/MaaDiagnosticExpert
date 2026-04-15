@@ -104,6 +104,20 @@
 
 这样外部系统既能拿到底层原始结果，也能拿到本项目的结构化整理结果。
 
+### 2.6 Profile
+
+`Profile` 表示一个可执行的分析配置。
+
+当前在 `core` 里，profile 先承担这些职责：
+
+- 标识当前分析场景
+- 提供推荐工具
+- 提供推荐知识库
+- 提供推荐查询关键词
+- 提供报告段落偏好
+
+后面它会继续扩展成更完整的应用级分析规范。
+
 ## 3. 输出 JSON 结构
 
 ```json
@@ -155,3 +169,23 @@
 检索命中的文档片段只是背景知识，不应自动当成事实。
 
 只有当某条知识被具体分析逻辑采用后，才应转成 observation 或被挂到 finding 的 supporting references 上。
+
+## 5. 当前 core 已具备的运行骨架
+
+目前 `core` 已经具备这些基础能力：
+
+1. 领域模型和 `zod` schema
+2. 内置 profile 与 profile 文件加载
+3. 多个工具结果的统一合并
+4. JSON 和 markdown 输出渲染
+5. 本地 CLI 入口
+
+当前 CLI 规划的命令包括：
+
+- `empty-result`
+- `validate-core-result`
+- `render-report`
+- `validate-profile`
+- `show-builtin-profile`
+
+这意味着后续 `python/mcp` 已经可以围绕 `core` CLI 设计调用链，而不需要等完整业务逻辑全部完成。
