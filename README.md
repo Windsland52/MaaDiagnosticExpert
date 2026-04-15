@@ -82,6 +82,7 @@ contracts/        # 跨语言共享的 JSON schema / profile schema
 - `python/mcp` 按 `uv` 管理，并可构建为独立 Python 包
 - 已接入官方 Python `mcp` SDK，并提供 stdio MCP server
 - 后续如需 Inspector / Streamable HTTP 等形态，再在这层扩展
+- 当前对子进程 stdio 互操作仍视为实验态，测试主覆盖先以官方 session 的进程内链路为准
 
 ### `python/agent`
 

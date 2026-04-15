@@ -36,6 +36,7 @@
 - 依赖本机可用的 `node`
 - 依赖已构建好的 `packages/core/dist/cli.js`
 - 依赖官方 `mcp==1.27.0`
+- 当前对子进程 stdio 互操作仍视为实验态，稳定测试先覆盖官方 session 的进程内链路
 
 ## 开发方式
 
