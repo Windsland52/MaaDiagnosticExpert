@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "profileId": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "inputs": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "file",
+              "folder",
+              "zip"
+            ]
+          }
+        },
+        "required": [
+          "path",
+          "kind"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "queries": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "task_overview": {
+          "type": "object",
+          "properties": {
+            "task_id": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          "additionalProperties": false
+        },
+        "node_timeline": {
+          "type": "object",
+          "properties": {
+            "task_id": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "node_id": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "scope_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "occurrence_index": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "task_id",
+            "node_id"
+          ],
+          "additionalProperties": false
+        },
+        "next_list_history": {
+          "type": "object",
+          "properties": {
+            "task_id": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "node_id": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "scope_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "occurrence_index": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "task_id",
+            "node_id"
+          ],
+          "additionalProperties": false
+        },
+        "parent_chain": {
+          "type": "object",
+          "properties": {
+            "task_id": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "node_id": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "scope_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "occurrence_index": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "task_id",
+            "node_id"
+          ],
+          "additionalProperties": false
+        },
+        "raw_lines": {
+          "type": "object",
+          "properties": {
+            "task_id": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "source_key": {
+              "type": "string",
+              "minLength": 1
+            },
+            "keywords": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "line_start": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "line_end": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "task_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "session_id",
+    "inputs",
+    "queries"
+  ],
+  "additionalProperties": false,
+  "$id": "https://maa-diagnostic-expert/contracts/maa-log-analyzer-runtime-input.schema.json",
+  "title": "MaaLogAnalyzerRuntimeInput",
+  "description": "Adapter input contract for running Maa Log Analyzer from the local core runtime."
+}

@@ -77,6 +77,12 @@
 - 错误结构
 - 版本约定
 
+当前实现方式：
+
+- schema 源头放在 `packages/core` 的 `zod` 模型
+- 通过 `pnpm contracts` 自动生成到仓库根目录 `contracts/`
+- Python 包只消费生成结果，不共享 TypeScript 类型
+
 ## 3. 依赖原则
 
 依赖方向固定如下：
@@ -136,9 +142,10 @@ python/agent   -> python/mcp
 
 ### 阶段 2
 
-再定 `contracts` 与 `core` CLI：
+固化并扩展 `contracts` 与 `core` CLI：
 
-- 固化跨语言边界
+- 已有第一批跨语言 schema
+- 后续继续补错误契约和更多 adapter 入参契约
 - 固化 `core` 本地运行时入口
 
 ### 阶段 3

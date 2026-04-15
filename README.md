@@ -97,6 +97,19 @@ contracts/        # 跨语言共享的 JSON schema / profile schema
 - profile 配置结构定义
 - 错误结构和版本约定
 
+当前已由 `core` 自动生成第一批 contract：
+
+- `core-result.schema.json`
+- `profile.schema.json`
+- `maa-log-analyzer-batch-input.schema.json`
+- `maa-log-analyzer-runtime-input.schema.json`
+
+生成命令：
+
+```bash
+pnpm contracts
+```
+
 ## 依赖方向
 
 ```text
@@ -131,6 +144,6 @@ core         -> nobody
 ## 当前优先级
 
 1. 先做 `core`
-2. 再定 `contracts`
+2. 固化并扩展 `contracts`
 3. 再做 `python/mcp`
 4. 最后再做 `python/agent`

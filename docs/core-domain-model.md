@@ -180,6 +180,8 @@
 4. JSON 和 markdown 输出渲染
 5. 本地 CLI 入口
 
+其中第 1 项现在也直接承担 `contracts/*.schema.json` 的生成来源，不再额外维护一份跨语言类型定义。
+
 当前 CLI 规划的命令包括：
 
 - `empty-result`

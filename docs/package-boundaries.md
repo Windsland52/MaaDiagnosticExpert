@@ -79,4 +79,5 @@
 
 - `CoreResult`
 - profile
-- error
+- 当前已补 `maa-log-analyzer` 两条主输入契约
+- error 仍可后续补充

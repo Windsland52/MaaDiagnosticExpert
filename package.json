@@ -5,6 +5,7 @@
   "packageManager": "pnpm@10.31.0",
   "scripts": {
     "build": "pnpm --filter @maa-diagnostic-expert/core run build",
+    "contracts": "pnpm --filter @maa-diagnostic-expert/core run generate:contracts",
     "typecheck": "pnpm --filter @maa-diagnostic-expert/core run typecheck",
     "test": "pnpm --filter @maa-diagnostic-expert/core run test"
   },

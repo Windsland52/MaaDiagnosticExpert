@@ -1,6 +1,12 @@
 export { createEmptyCoreResult, parseCoreResult } from "./factories.js";
 export { buildCoreResultFromAdapterOutput, mergeAdapterOutputs } from "./results.js";
 export * from "./adapters/index.js";
+export {
+  buildContractDocuments,
+  ContractDefinitions,
+  generateContractFiles,
+  resolveContractsDir
+} from "./contracts/definitions.js";
 
 export {
   ConfidenceSchema,

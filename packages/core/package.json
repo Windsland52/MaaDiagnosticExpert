@@ -20,6 +20,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "generate:contracts": "node --import tsx ./src/contracts/generate.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
