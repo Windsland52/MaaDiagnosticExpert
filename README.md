@@ -170,6 +170,7 @@ core         -> nobody
 - [docs/core-domain-model.md](/mnt/c/github/MaaDiagnosticExpert/docs/core-domain-model.md)
 - [docs/monorepo-architecture.md](/mnt/c/github/MaaDiagnosticExpert/docs/monorepo-architecture.md)
 - [docs/package-boundaries.md](/mnt/c/github/MaaDiagnosticExpert/docs/package-boundaries.md)
+- [docs/python-mcp-stdio-investigation.md](/mnt/c/github/MaaDiagnosticExpert/docs/python-mcp-stdio-investigation.md)
 - [docs/quickstart-log-analysis.md](/mnt/c/github/MaaDiagnosticExpert/docs/quickstart-log-analysis.md)
 
 ## 快速上手

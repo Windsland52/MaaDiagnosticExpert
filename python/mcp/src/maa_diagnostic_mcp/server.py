@@ -41,6 +41,11 @@ async def stdio_transport(
 
                 try:
                     message = mcp_types.JSONRPCMessage.model_validate_json(raw_line)
+                    # In this environment, forwarding the post-initialize
+                    # client notification into ServerSession can block the
+                    # subprocess stdio path. The session already transitions
+                    # state when handling InitializeRequest, and our tools do
+                    # not depend on this notification payload.
                     if getattr(message.root, "method", None) == "notifications/initialized":
                         continue
                     future = asyncio.run_coroutine_threadsafe(
@@ -270,8 +275,9 @@ class _PatchedServerSession(ServerSession):
     async def _handle_incoming(self, req: Any) -> None:
         # ServerSession's notification lifecycle is already handled in
         # _received_notification. Forwarding notifications into the request
-        # stream can stall stdio subprocess mode in this environment, while
-        # requests still need to reach Server.run().
+        # stream can stall stdio subprocess mode in this environment.
+        # Requests still need to reach Server.run() so the low-level server can
+        # dispatch list_tools/call_tool handlers.
         if isinstance(req, RequestResponder):
             await self._incoming_message_stream_writer.send(req)
 
