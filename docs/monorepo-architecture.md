@@ -82,6 +82,7 @@
 - schema 源头放在 `packages/core` 的 `zod` 模型
 - 通过 `pnpm contracts` 自动生成到仓库根目录 `contracts/`
 - Python 包只消费生成结果，不共享 TypeScript 类型
+- 当前已包含 `CoreResult`、`CoreError` 和 `maa-log-analyzer` 适配器入参契约
 
 ## 3. 依赖原则
 

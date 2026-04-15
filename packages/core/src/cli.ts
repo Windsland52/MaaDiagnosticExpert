@@ -9,8 +9,10 @@ import {
   normalizeMaaLogAnalyzerResults,
   normalizeMaaLogAnalyzerRuntimeInput
 } from "./adapters/index.js";
+import { toCoreError } from "./errors.js";
 import { createEmptyCoreResult, parseCoreResult } from "./factories.js";
 import { buildCoreResultFromAdapterOutput } from "./results.js";
+import { renderCoreErrorJson } from "./renderers/error.js";
 import { renderCoreResultJson } from "./renderers/json.js";
 import { buildMarkdownReport, renderCoreResultMarkdown } from "./renderers/markdown.js";
 import { loadProfileFromFile, requireProfile } from "./profiles/loader.js";
@@ -81,6 +83,9 @@ function printHelp(): string {
   return [
     "maa-diagnostic-core",
     "",
+    "Global options:",
+    "  --json-error            Render structured error JSON to stderr on failure",
+    "",
     "Commands:",
     "  empty-result [--profile <id>] [--output <path>]",
     "  validate-core-result [--input <path>] [--output <path>]",
@@ -90,6 +95,21 @@ function printHelp(): string {
     "  validate-profile --input <path> [--output <path>]",
     "  show-builtin-profile --id <id> [--output <path>]"
   ].join("\n");
+}
+
+function renderCliError(error: unknown): string {
+  const { command, options } = parseArgs(process.argv.slice(2));
+  const normalized = toCoreError(error, {
+    meta: {
+      command
+    }
+  });
+
+  if (isEnabledOption(options, "json-error")) {
+    return renderCoreErrorJson(normalized);
+  }
+
+  return normalized.message;
 }
 
 async function main(): Promise<void> {
@@ -175,7 +195,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error);
-  process.stderr.write(`${message}\n`);
+  process.stderr.write(`${renderCliError(error)}\n`);
   process.exitCode = 1;
 });

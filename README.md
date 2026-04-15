@@ -41,6 +41,7 @@ contracts/        # 跨语言共享的 JSON schema / profile schema
 负责：
 
 - 领域模型：`Reference / Observation / Finding / Report / Profile`
+- 结构化成功 / 失败输出：`CoreResult / CoreError`
 - 工具结果归一化
 - retrieval
 - profile / skill
@@ -100,6 +101,7 @@ contracts/        # 跨语言共享的 JSON schema / profile schema
 当前已由 `core` 自动生成第一批 contract：
 
 - `core-result.schema.json`
+- `error.schema.json`
 - `profile.schema.json`
 - `maa-log-analyzer-batch-input.schema.json`
 - `maa-log-analyzer-runtime-input.schema.json`

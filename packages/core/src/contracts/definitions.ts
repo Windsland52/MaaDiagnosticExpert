@@ -8,6 +8,7 @@ import {
   MaaLogAnalyzerBatchInputSchema,
   MaaLogAnalyzerRuntimeInputSchema
 } from "../adapters/index.js";
+import { CoreErrorSchema } from "../models/core-error.js";
 import { CoreResultSchema } from "../models/core-result.js";
 import { ProfileSchema } from "../profiles/schema.js";
 
@@ -28,6 +29,12 @@ export const ContractDefinitions: ContractDefinition[] = [
     title: "CoreResult",
     description: "Structured output contract emitted by @maa-diagnostic-expert/core.",
     schema: CoreResultSchema
+  },
+  {
+    filename: "error.schema.json",
+    title: "CoreError",
+    description: "Structured error contract emitted by @maa-diagnostic-expert/core runtime.",
+    schema: CoreErrorSchema
   },
   {
     filename: "profile.schema.json",

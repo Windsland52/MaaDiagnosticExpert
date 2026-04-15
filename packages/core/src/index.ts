@@ -7,6 +7,7 @@ export {
   generateContractFiles,
   resolveContractsDir
 } from "./contracts/definitions.js";
+export { createCoreError, toCoreError } from "./errors.js";
 
 export {
   ConfidenceSchema,
@@ -52,6 +53,16 @@ export {
 } from "./models/report.js";
 
 export {
+  CoreErrorCodeSchema,
+  CoreErrorSchema,
+  ErrorDetailPathSegmentSchema,
+  ErrorDetailSchema,
+  type CoreError,
+  type CoreErrorCode,
+  type ErrorDetail
+} from "./models/core-error.js";
+
+export {
   CoreResultSchema,
   DiagnosticMetaSchema,
   RawToolResultsSchema,
@@ -84,4 +95,5 @@ export {
   renderCoreResultMarkdown
 } from "./renderers/markdown.js";
 
+export { renderCoreErrorJson } from "./renderers/error.js";
 export { renderCoreResultJson } from "./renderers/json.js";

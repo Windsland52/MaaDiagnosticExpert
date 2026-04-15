@@ -14,10 +14,8 @@
 
 ### 输出
 
-- `rawToolResults`
-- `diagnosticMeta`
-- `retrievalHits`
-- `report`
+- 成功路径输出 `CoreResult`
+- 失败路径输出 `CoreError`
 
 ### 公开 API 草案
 
@@ -26,6 +24,7 @@
 - `buildFindings()`
 - `searchKnowledge()`
 - `renderReport()`
+- `renderError()`
 - `runCli()`
 
 ## python/mcp
@@ -78,6 +77,6 @@
 ### 范围
 
 - `CoreResult`
+- `CoreError`
 - profile
-- 当前已补 `maa-log-analyzer` 两条主输入契约
-- error 仍可后续补充
+- `maa-log-analyzer` 两条主输入契约

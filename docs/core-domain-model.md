@@ -104,7 +104,25 @@
 
 这样外部系统既能拿到底层原始结果，也能拿到本项目的结构化整理结果。
 
-### 2.6 Profile
+### 2.6 CoreError
+
+`CoreError` 是 `core` 的统一失败输出容器。
+
+它用于：
+
+- 让 `python/mcp` 或未来的 `python/agent` 稳定识别失败类型
+- 把校验失败、配置缺失、I/O 异常和内部错误变成结构化对象
+- 避免外部系统只靠 stderr 文本做脆弱解析
+
+当前关键字段：
+
+- `code`
+- `message`
+- `retryable`
+- `details`
+- `meta`
+
+### 2.7 Profile
 
 `Profile` 表示一个可执行的分析配置。
 
@@ -177,7 +195,7 @@
 1. 领域模型和 `zod` schema
 2. 内置 profile 与 profile 文件加载
 3. 多个工具结果的统一合并
-4. JSON 和 markdown 输出渲染
+4. JSON 成功/失败输出渲染
 5. 本地 CLI 入口
 
 其中第 1 项现在也直接承担 `contracts/*.schema.json` 的生成来源，不再额外维护一份跨语言类型定义。
@@ -191,6 +209,8 @@
 - `run-mla-runtime`
 - `validate-profile`
 - `show-builtin-profile`
+
+同时 CLI 还支持全局参数 `--json-error`，用于在失败时输出 `CoreError` JSON。
 
 这意味着后续 `python/mcp` 已经可以围绕 `core` CLI 设计调用链，而不需要等完整业务逻辑全部完成。
 

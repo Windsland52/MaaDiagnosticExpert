@@ -9,6 +9,7 @@ describe("contracts", () => {
 
     expect(filenames).toEqual([
       "core-result.schema.json",
+      "error.schema.json",
       "profile.schema.json",
       "maa-log-analyzer-batch-input.schema.json",
       "maa-log-analyzer-runtime-input.schema.json"
