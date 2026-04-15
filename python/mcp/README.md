@@ -1,6 +1,6 @@
 # Python MCP
 
-这里将放置 Python 版 MCP server。
+这里放置 Python 侧的 MCP 适配层。
 
 职责：
 
@@ -12,3 +12,105 @@
 
 - 重写 `core` 的诊断逻辑
 - 实现本地 agent
+
+当前阶段已落地：
+
+- `src/maa_diagnostic_mcp/runtime.py`
+  - 调用本地 `packages/core/dist/cli.js`
+  - 统一加 `--json-error`
+  - 解析 `CoreResult` / `CoreError`
+- `src/maa_diagnostic_mcp/tools.py`
+  - 提供 SDK 无关的 tool registry
+  - 后续任意 MCP SDK 只需薄封装这一层
+- `src/maa_diagnostic_mcp/cli.py`
+  - 提供包内 CLI 入口
+  - 支持列工具、查看 contract、直接调用 tool
+- `tests/test_runtime.py`
+  - 覆盖基础运行链路
+
+当前约束：
+
+- 依赖本机可用的 `node`
+- 依赖已构建好的 `packages/core/dist/cli.js`
+- 当前还没有绑定具体 MCP SDK
+
+## 开发方式
+
+这个包现在按 `uv` 管理。
+
+常用命令：
+
+```bash
+uv lock
+uv run --no-build-isolation python -m unittest discover -s tests -v
+```
+
+如果要从仓库根目录执行：
+
+```bash
+uv run --directory python/mcp --no-build-isolation python -m unittest discover -s tests -v
+```
+
+如果只想跑当前仓库内的单元测试，而不触发项目可编辑安装，可以用：
+
+```bash
+uv run --no-project python -m unittest discover -s tests -v
+```
+
+如果在仓库内直接调包内 CLI，也需要显式把 `src` 放进 `PYTHONPATH`：
+
+```bash
+PYTHONPATH=src uv run --no-project python -m maa_diagnostic_mcp list-tools
+```
+
+## 构建与发布
+
+本包已经补齐了基础 PyPI 元数据：
+
+- 包名：`maa-diagnostic-expert-mcp`
+- License：`MIT`
+- `Typing :: Typed`
+- `Homepage / Repository / Issues`
+
+本地构建：
+
+```bash
+uv build
+```
+
+安装后可直接使用：
+
+```bash
+maa-diagnostic-mcp list-tools
+maa-diagnostic-mcp show-contract --name core_error
+maa-diagnostic-mcp invoke --tool empty_result --profile-id generic-maa-log
+```
+
+后续发布到 PyPI 时，建议直接使用：
+
+```bash
+uv publish
+```
+
+如果走 CI，优先考虑 PyPI Trusted Publishing，不建议长期保管 token。
+
+## 运行测试
+
+```bash
+uv run python -m unittest discover -s tests -v
+```
+
+说明：
+
+- `uv.lock` 已提交，作为 Python 侧依赖锁文件
+- 仓库根脚本默认把 `uv` 缓存放在 `.uv-cache/`
+- `uv build` 在冷缓存环境下会先解析并获取 `build-system.requires`
+- 根目录脚本 `pnpm run test:python-mcp` 使用 `uv run --no-project`，目的是让仓库内单测在更少外部前提下也能跑通
+
+如需覆盖默认 CLI 路径，可设置：
+
+```bash
+export MAA_DIAGNOSTIC_CORE_BIN=/path/to/core-binary
+export MAA_DIAGNOSTIC_CORE_CLI_JS=/path/to/cli.js
+export MAA_DIAGNOSTIC_NODE_BIN=node
+```

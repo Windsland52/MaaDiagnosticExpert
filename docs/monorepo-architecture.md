@@ -151,9 +151,10 @@ python/agent   -> python/mcp
 
 ### 阶段 3
 
-再做 `python/mcp`：
+继续完善 `python/mcp`：
 
-- 暴露常用工具
+- 当前已落第一版 SDK 无关 runtime wrapper
+- 下一步补具体 MCP SDK 绑定
 - 让外部 agent 可以直接消费 `core`
 
 ### 阶段 4

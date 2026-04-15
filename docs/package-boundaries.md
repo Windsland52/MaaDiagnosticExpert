@@ -32,6 +32,7 @@
 ### 目标
 
 让外部 agent 以 MCP tools 方式调用本地 `core` 运行时。
+当前已先落 SDK 无关的 Python wrapper 和 tool registry。
 
 ### 输入
 

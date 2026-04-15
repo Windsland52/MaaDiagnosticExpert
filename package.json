@@ -5,7 +5,12 @@
   "packageManager": "pnpm@10.31.0",
   "scripts": {
     "build": "pnpm --filter @maa-diagnostic-expert/core run build",
+    "build:python-mcp": "uv --cache-dir .uv-cache build --directory python/mcp",
     "contracts": "pnpm --filter @maa-diagnostic-expert/core run generate:contracts",
+    "lock:python-mcp": "uv --cache-dir .uv-cache lock --directory python/mcp",
+    "run:python-mcp-cli": "PYTHONPATH=src uv --cache-dir .uv-cache run --directory python/mcp --no-project python -m maa_diagnostic_mcp",
+    "test:python-mcp": "uv --cache-dir .uv-cache run --directory python/mcp --no-project python -m unittest discover -s tests -v",
+    "test:python-mcp:project": "uv --cache-dir .uv-cache run --directory python/mcp python -m unittest discover -s tests -v",
     "typecheck": "pnpm --filter @maa-diagnostic-expert/core run typecheck",
     "test": "pnpm --filter @maa-diagnostic-expert/core run test"
   },

@@ -3,7 +3,7 @@
 `MaaDiagnosticExpert` 采用混合语言 monorepo 结构：
 
 - `packages/core` 使用 TypeScript，作为主体能力和本地 CLI 引擎
-- `python/mcp` 计划使用 Python，作为 MCP server
+- `python/mcp` 使用 Python，作为 MCP 适配层
 - `python/agent` 计划使用 Python，作为后置的本地 agent
 
 ## 项目定位
@@ -31,7 +31,7 @@
 packages/
 └─ core/          # TypeScript，诊断能力主体与本地 CLI 引擎
 python/
-├─ mcp/           # Python，MCP server
+├─ mcp/           # Python，MCP 适配层
 └─ agent/         # Python，后置的本地 agent
 contracts/        # 跨语言共享的 JSON schema / profile schema
 ```
@@ -75,6 +75,13 @@ contracts/        # 跨语言共享的 JSON schema / profile schema
 - 只依赖 `core` 的契约和本地运行时
 - 不承载 agent 逻辑
 
+当前状态：
+
+- 已有第一版 Python runtime wrapper
+- 已能调用 `core` CLI 并解析 `CoreError`
+- `python/mcp` 按 `uv` 管理，并可构建为独立 Python 包
+- 具体 MCP SDK 绑定仍后置
+
 ### `python/agent`
 
 负责：
@@ -110,6 +117,19 @@ contracts/        # 跨语言共享的 JSON schema / profile schema
 
 ```bash
 pnpm contracts
+```
+
+Python MCP 测试：
+
+```bash
+pnpm run test:python-mcp
+```
+
+Python MCP 锁定与构建：
+
+```bash
+pnpm run lock:python-mcp
+pnpm run build:python-mcp
 ```
 
 ## 依赖方向
