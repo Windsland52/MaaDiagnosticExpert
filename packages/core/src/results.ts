@@ -38,3 +38,10 @@ export function mergeAdapterOutputs(
 
   return result;
 }
+
+export function buildCoreResultFromAdapterOutput(
+  output: AdapterRunOutput,
+  profileId: string | null = null
+): CoreResult {
+  return mergeAdapterOutputs([output], profileId);
+}

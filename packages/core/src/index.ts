@@ -1,5 +1,6 @@
 export { createEmptyCoreResult, parseCoreResult } from "./factories.js";
-export { mergeAdapterOutputs } from "./results.js";
+export { buildCoreResultFromAdapterOutput, mergeAdapterOutputs } from "./results.js";
+export * from "./adapters/index.js";
 
 export {
   ConfidenceSchema,

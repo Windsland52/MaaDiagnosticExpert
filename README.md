@@ -57,6 +57,7 @@ contracts/        # 跨语言共享的 JSON schema / profile schema
 说明：
 
 - 开发阶段需要 Node.js
+- 当前因为直接依赖 `MaaLogAnalyzer` 的可复用包，开发基线为 `Node.js 24+`
 - 发布阶段目标是将 `core` 打包为本地可执行 CLI，引导 `python/mcp` 与未来的 `python/agent` 直接调用
 
 ### `python/mcp`

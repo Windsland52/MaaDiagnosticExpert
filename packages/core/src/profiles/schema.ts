@@ -8,11 +8,16 @@ export const ProfileSchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1).optional(),
   inputs: z.object({
-    acceptsRawToolResults: z.boolean().default(true),
-    acceptsSourcePaths: z.boolean().default(true),
-    acceptsArchives: z.boolean().default(true),
-    acceptsProfiles: z.boolean().default(true)
-  }).default({}),
+    acceptsRawToolResults: z.boolean(),
+    acceptsSourcePaths: z.boolean(),
+    acceptsArchives: z.boolean(),
+    acceptsProfiles: z.boolean()
+  }).default({
+    acceptsRawToolResults: true,
+    acceptsSourcePaths: true,
+    acceptsArchives: true,
+    acceptsProfiles: true
+  }),
   recommendedTools: z.array(z.string().min(1)).default([]),
   recommendedCorpora: z.array(z.string().min(1)).default([]),
   recommendedQueries: z.array(z.string().min(1)).default([]),

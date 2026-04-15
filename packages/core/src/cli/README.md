@@ -7,3 +7,13 @@
 - 让 `python/mcp` 和未来的 `python/agent` 可以直接调用 `core`
 - 固化 JSON 输入输出协议
 - 避免 Python 侧重写核心逻辑
+
+当前已规划命令：
+
+- `empty-result`
+- `validate-core-result`
+- `render-report`
+- `normalize-mla-result`
+- `run-mla-runtime`
+- `validate-profile`
+- `show-builtin-profile`

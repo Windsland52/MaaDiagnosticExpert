@@ -3,7 +3,14 @@ import { writeFile } from "node:fs/promises";
 
 import { z } from "zod";
 
+import {
+  MaaLogAnalyzerBatchInputSchema,
+  MaaLogAnalyzerRuntimeInputSchema,
+  normalizeMaaLogAnalyzerResults,
+  normalizeMaaLogAnalyzerRuntimeInput
+} from "./adapters/index.js";
 import { createEmptyCoreResult, parseCoreResult } from "./factories.js";
+import { buildCoreResultFromAdapterOutput } from "./results.js";
 import { renderCoreResultJson } from "./renderers/json.js";
 import { buildMarkdownReport, renderCoreResultMarkdown } from "./renderers/markdown.js";
 import { loadProfileFromFile, requireProfile } from "./profiles/loader.js";
@@ -47,6 +54,20 @@ function requireStringOption(
   return schema.parse(value);
 }
 
+function isEnabledOption(
+  options: Record<string, string | boolean>,
+  key: string
+): boolean {
+  const value = options[key];
+  if (value === true) {
+    return true;
+  }
+  if (typeof value === "string") {
+    return ["1", "true", "yes", "on"].includes(value.toLowerCase());
+  }
+  return false;
+}
+
 async function writeOutput(value: string, outputPath?: string): Promise<void> {
   if (outputPath) {
     await writeFile(outputPath, value, "utf8");
@@ -64,6 +85,8 @@ function printHelp(): string {
     "  empty-result [--profile <id>] [--output <path>]",
     "  validate-core-result [--input <path>] [--output <path>]",
     "  render-report [--input <path>] [--format markdown|json] [--output <path>]",
+    "  normalize-mla-result [--input <path>] [--with-report] [--output <path>]",
+    "  run-mla-runtime [--input <path>] [--with-report] [--output <path>]",
     "  validate-profile --input <path> [--output <path>]",
     "  show-builtin-profile --id <id> [--output <path>]"
   ].join("\n");
@@ -99,6 +122,34 @@ async function main(): Promise<void> {
       }
 
       await writeOutput(renderCoreResultMarkdown(result), outputPath);
+      return;
+    }
+
+    case "normalize-mla-result": {
+      const inputPath = typeof options.input === "string" ? options.input : undefined;
+      const payload = MaaLogAnalyzerBatchInputSchema.parse(await readJsonInput(inputPath));
+      const output = normalizeMaaLogAnalyzerResults(payload);
+      const result = buildCoreResultFromAdapterOutput(output, payload.profileId ?? null);
+
+      if (isEnabledOption(options, "with-report")) {
+        result.report = buildMarkdownReport(result);
+      }
+
+      await writeOutput(renderCoreResultJson(result), outputPath);
+      return;
+    }
+
+    case "run-mla-runtime": {
+      const inputPath = typeof options.input === "string" ? options.input : undefined;
+      const payload = MaaLogAnalyzerRuntimeInputSchema.parse(await readJsonInput(inputPath));
+      const output = await normalizeMaaLogAnalyzerRuntimeInput(payload);
+      const result = buildCoreResultFromAdapterOutput(output, payload.profileId ?? null);
+
+      if (isEnabledOption(options, "with-report")) {
+        result.report = buildMarkdownReport(result);
+      }
+
+      await writeOutput(renderCoreResultJson(result), outputPath);
       return;
     }
 

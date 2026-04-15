@@ -23,7 +23,12 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "dependencies": {
+    "@windsland52/maa-log-parser": "^3.0.1",
+    "@windsland52/maa-log-tools": "^3.0.1",
     "fast-glob": "^3.3.3",
     "fflate": "^0.8.2",
     "jsonc-parser": "^3.3.1",

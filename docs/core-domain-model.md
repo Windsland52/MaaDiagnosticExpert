@@ -185,7 +185,40 @@
 - `empty-result`
 - `validate-core-result`
 - `render-report`
+- `normalize-mla-result`
+- `run-mla-runtime`
 - `validate-profile`
 - `show-builtin-profile`
 
 这意味着后续 `python/mcp` 已经可以围绕 `core` CLI 设计调用链，而不需要等完整业务逻辑全部完成。
+
+## 6. 第一个真实适配器
+
+当前 `core` 已经补上第一个真实适配器体系：`maa-log-analyzer`。
+
+目前分成两层：
+
+1. `result adapter`
+   - 校验 MaaLogAnalyzer 的工具结果结构
+   - 将多个工具调用结果整理成统一 observation
+   - 从 `get_task_overview` 中提取最小 finding
+   - 保留原始工具结果，供外部继续消费
+
+2. `runtime adapter`
+   - 直接依赖 `@windsland52/maa-log-parser`
+   - 通过 `createAnalyzerToolHandlers` 调用真实 MLA 运行时
+   - 支持本地 `file / folder / zip` 输入
+
+当前支持接入的方法包括：
+
+- `parse_log_bundle`
+- `get_task_overview`
+- `get_node_timeline`
+- `get_next_list_history`
+- `get_parent_chain`
+- `get_raw_lines`
+
+这一步的目的不是立刻做复杂诊断，而是先把两条主通路都定下来：
+
+1. `外部 MLA 结果 -> core 标准输出`
+2. `core 直接调用 MLA -> core 标准输出`
