@@ -23,10 +23,13 @@ classifiers = [
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Typing :: Typed"
 ]
-dependencies = []
+dependencies = [
+    "mcp==1.27.0",
+]
 
 [project.scripts]
 maa-diagnostic-mcp = "maa_diagnostic_mcp.cli:main"
+maa-diagnostic-mcp-server = "maa_diagnostic_mcp.server:main"
 
 [project.urls]
 Homepage = "https://github.com/Windsland52/MaaDiagnosticExpert"

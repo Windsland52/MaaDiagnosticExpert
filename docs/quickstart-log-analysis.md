@@ -81,6 +81,12 @@ pnpm run run:python-mcp-cli -- invoke \
 pnpm run run:python-mcp-cli -- list-tools
 ```
 
+如果要把它当成 stdio MCP server 给外部 agent 接：
+
+```bash
+pnpm run run:python-mcp-server
+```
+
 ## 第五步：失败时怎么看
 
 如果命令失败，先看结构化错误：
@@ -106,5 +112,4 @@ pnpm run run:core-cli -- run-mla-runtime \
 
 - 自动抓 issue 页面
 - 多轮对话分析
-- MCP server transport
 - 基于 RAG 的文档增强推理

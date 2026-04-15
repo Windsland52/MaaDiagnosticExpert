@@ -80,7 +80,8 @@ contracts/        # 跨语言共享的 JSON schema / profile schema
 - 已有第一版 Python runtime wrapper
 - 已能调用 `core` CLI 并解析 `CoreError`
 - `python/mcp` 按 `uv` 管理，并可构建为独立 Python 包
-- 具体 MCP SDK 绑定仍后置
+- 已接入官方 Python `mcp` SDK，并提供 stdio MCP server
+- 后续如需 Inspector / Streamable HTTP 等形态，再在这层扩展
 
 ### `python/agent`
 
@@ -123,6 +124,12 @@ Python MCP 测试：
 
 ```bash
 pnpm run test:python-mcp
+```
+
+从仓库根目录直接启动 Python MCP stdio server：
+
+```bash
+pnpm run run:python-mcp-server
 ```
 
 Python MCP 锁定与构建：

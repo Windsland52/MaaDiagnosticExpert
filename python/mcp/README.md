@@ -20,11 +20,14 @@
   - 统一加 `--json-error`
   - 解析 `CoreResult` / `CoreError`
 - `src/maa_diagnostic_mcp/tools.py`
-  - 提供 SDK 无关的 tool registry
-  - 后续任意 MCP SDK 只需薄封装这一层
+  - 提供 tool registry
+  - 同时承载 CLI 视图和官方 MCP `Tool` 定义
 - `src/maa_diagnostic_mcp/cli.py`
   - 提供包内 CLI 入口
   - 支持列工具、查看 contract、直接调用 tool
+- `src/maa_diagnostic_mcp/server.py`
+  - 基于官方 `mcp` Python SDK 提供 stdio server
+  - 通过官方 server 生命周期暴露 `tools/list`、`tools/call`
 - `tests/test_runtime.py`
   - 覆盖基础运行链路
 
@@ -32,7 +35,7 @@
 
 - 依赖本机可用的 `node`
 - 依赖已构建好的 `packages/core/dist/cli.js`
-- 当前还没有绑定具体 MCP SDK
+- 依赖官方 `mcp==1.27.0`
 
 ## 开发方式
 
@@ -84,6 +87,13 @@ uv build
 maa-diagnostic-mcp list-tools
 maa-diagnostic-mcp show-contract --name core_error
 maa-diagnostic-mcp invoke --tool empty_result --profile-id generic-maa-log
+maa-diagnostic-mcp-server
+```
+
+仓库内直接起 stdio server：
+
+```bash
+PYTHONPATH=src uv run --no-project python -m maa_diagnostic_mcp serve-stdio
 ```
 
 后续发布到 PyPI 时，建议直接使用：

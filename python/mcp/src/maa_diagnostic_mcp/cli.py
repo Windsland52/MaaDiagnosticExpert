@@ -8,6 +8,7 @@ from typing import Any
 
 from .contracts import CONTRACT_FILENAMES, load_contract
 from .errors import CoreCliError
+from .server import McpServer
 from .tools import CoreToolset, get_tool_spec, list_tool_specs
 
 
@@ -51,6 +52,8 @@ def _build_parser() -> argparse.ArgumentParser:
     invoke_parser.add_argument("--profile-id")
     invoke_parser.add_argument("--format", choices=["markdown", "json"], default="markdown")
     invoke_parser.add_argument("--with-report", action="store_true")
+
+    subparsers.add_parser("serve-stdio")
 
     return parser
 
@@ -99,6 +102,9 @@ def main(argv: list[str] | None = None) -> int:
             )
             _write_output(result)
             return 0
+
+        if args.command == "serve-stdio":
+            return McpServer(toolset=toolset).serve_stdio()
 
         parser.print_help()
         return 0

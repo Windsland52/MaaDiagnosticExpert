@@ -153,8 +153,9 @@ python/agent   -> python/mcp
 
 继续完善 `python/mcp`：
 
-- 当前已落第一版 SDK 无关 runtime wrapper
-- 下一步补具体 MCP SDK 绑定
+- 当前已落第一版 runtime wrapper
+- 已接入官方 Python `mcp` SDK 并提供 stdio MCP server
+- 下一步只在确有需要时扩展更多 transport / 集成形态
 - 让外部 agent 可以直接消费 `core`
 
 ### 阶段 4
@@ -190,7 +191,8 @@ python/agent   -> python/mcp
 
 允许：
 
-- Python MCP SDK
+- Python 标准库
+- 官方 Python MCP SDK
 - `core` runtime
 - `contracts`
 
