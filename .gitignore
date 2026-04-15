@@ -23,5 +23,9 @@ dist-ssr
 *.AppImage
 *.vsix
 
+# Python Tools for Visual Studio (PTVS)
+__pycache__/
+*.pyc
+
 .codex
 sample/
