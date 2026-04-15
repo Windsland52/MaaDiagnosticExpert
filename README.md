@@ -162,6 +162,14 @@ core         -> nobody
 - [docs/core-domain-model.md](/mnt/c/github/MaaDiagnosticExpert/docs/core-domain-model.md)
 - [docs/monorepo-architecture.md](/mnt/c/github/MaaDiagnosticExpert/docs/monorepo-architecture.md)
 - [docs/package-boundaries.md](/mnt/c/github/MaaDiagnosticExpert/docs/package-boundaries.md)
+- [docs/quickstart-log-analysis.md](/mnt/c/github/MaaDiagnosticExpert/docs/quickstart-log-analysis.md)
+
+## 快速上手
+
+最短可跑通路径见：
+
+- [examples/log-analysis/README.md](/mnt/c/github/MaaDiagnosticExpert/examples/log-analysis/README.md)
+- [docs/quickstart-log-analysis.md](/mnt/c/github/MaaDiagnosticExpert/docs/quickstart-log-analysis.md)
 
 ## 当前优先级
 
