@@ -1,9 +1,11 @@
 import { z } from "zod";
 
 import {
+  CoreErrorCodeSchema,
   CoreErrorSchema,
   type CoreError,
   type CoreErrorCode,
+  ErrorDetailSchema,
   type ErrorDetail
 } from "./models/core-error.js";
 
@@ -16,6 +18,10 @@ type ToCoreErrorOptions = {
 type ErrorWithCode = {
   code?: unknown;
   message?: unknown;
+  coreCode?: unknown;
+  retryable?: unknown;
+  details?: unknown;
+  meta?: unknown;
 };
 
 const RetryableIoCodes = new Set(["EAGAIN", "EBUSY", "EMFILE", "ENFILE"]);
@@ -24,7 +30,21 @@ function isErrorWithCode(value: unknown): value is ErrorWithCode {
   return typeof value === "object" && value !== null;
 }
 
+function readExplicitCoreCode(error: unknown): CoreErrorCode | null {
+  if (!isErrorWithCode(error)) {
+    return null;
+  }
+
+  const parsed = CoreErrorCodeSchema.safeParse(error.coreCode);
+  return parsed.success ? parsed.data : null;
+}
+
 function inferErrorCode(error: unknown): CoreErrorCode {
+  const explicit = readExplicitCoreCode(error);
+  if (explicit) {
+    return explicit;
+  }
+
   if (error instanceof z.ZodError) {
     return "validation_error";
   }
@@ -41,6 +61,10 @@ function inferErrorCode(error: unknown): CoreErrorCode {
 }
 
 function inferRetryable(error: unknown, code: CoreErrorCode): boolean {
+  if (isErrorWithCode(error) && typeof error.retryable === "boolean") {
+    return error.retryable;
+  }
+
   if (code !== "io_error") {
     return false;
   }
@@ -51,6 +75,13 @@ function inferRetryable(error: unknown, code: CoreErrorCode): boolean {
 }
 
 function normalizeDetails(error: unknown): ErrorDetail[] {
+  if (isErrorWithCode(error) && Array.isArray(error.details)) {
+    return error.details.flatMap((detail) => {
+      const parsed = ErrorDetailSchema.safeParse(detail);
+      return parsed.success ? [parsed.data] : [];
+    });
+  }
+
   if (!(error instanceof z.ZodError)) {
     return [];
   }
@@ -76,6 +107,20 @@ function normalizeMessage(error: unknown): string {
   return "Unknown error";
 }
 
+function normalizeMeta(
+  error: unknown,
+  optionsMeta: Record<string, unknown> | undefined
+): Record<string, unknown> {
+  const errorMeta = isErrorWithCode(error) && typeof error.meta === "object" && error.meta !== null
+    ? error.meta as Record<string, unknown>
+    : {};
+
+  return {
+    ...errorMeta,
+    ...(optionsMeta ?? {})
+  };
+}
+
 export function createCoreError(input: Omit<CoreError, "apiVersion"> & { apiVersion?: "error/v1" }): CoreError {
   return CoreErrorSchema.parse({
     apiVersion: "error/v1",
@@ -91,6 +136,6 @@ export function toCoreError(error: unknown, options: ToCoreErrorOptions = {}): C
     message: normalizeMessage(error),
     retryable: options.retryable ?? inferRetryable(error, code),
     details: normalizeDetails(error),
-    meta: options.meta ?? {}
+    meta: normalizeMeta(error, options.meta)
   });
 }

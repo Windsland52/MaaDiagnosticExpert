@@ -391,6 +391,8 @@ function applyPipelineRules(result: CoreResult, hasMseSource: boolean): void {
       continue;
     }
 
+    const summary = isRecord(observation.payload.summary) ? observation.payload.summary : null;
+
     const taskDefinition = taskDefinitionObservations.find((item) => {
       if (!isRecord(item.payload)) {
         return false;

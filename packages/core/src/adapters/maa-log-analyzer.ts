@@ -36,6 +36,23 @@ export const MaaLogAnalyzerToolResultSchema = z.object({
   response: MaaLogAnalyzerEnvelopeSchema
 });
 
+const MaaLogAnalyzerEvidenceSchema = z.object({
+  evidence_id: z.string().min(1),
+  source_tool: z.string().min(1),
+  source_range: z.object({
+    session_id: z.string().min(1),
+    source_key: z.string().min(1).optional(),
+    task_id: z.number().int().optional(),
+    node_id: z.number().int().optional(),
+    scope_id: z.string().min(1).optional(),
+    occurrence_index: z.number().int().positive().optional(),
+    line_start: z.number().int().positive().optional(),
+    line_end: z.number().int().positive().optional()
+  }),
+  payload: z.record(z.string(), z.unknown()).default({}),
+  confidence: z.number().nonnegative()
+});
+
 export const MaaLogAnalyzerBatchInputSchema = z.object({
   profileId: z.string().min(1).nullable().optional(),
   results: z.array(MaaLogAnalyzerToolResultSchema).min(1)
@@ -45,6 +62,109 @@ export type MaaLogAnalyzerMethod = z.infer<typeof MaaLogAnalyzerMethodSchema>;
 export type MaaLogAnalyzerEnvelope = z.infer<typeof MaaLogAnalyzerEnvelopeSchema>;
 export type MaaLogAnalyzerToolResult = z.infer<typeof MaaLogAnalyzerToolResultSchema>;
 export type MaaLogAnalyzerBatchInput = z.infer<typeof MaaLogAnalyzerBatchInputSchema>;
+type MaaLogAnalyzerEvidence = z.infer<typeof MaaLogAnalyzerEvidenceSchema>;
+
+function readString(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function readPositiveInteger(value: unknown): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : null;
+}
+
+function dedupeReferences(references: z.infer<typeof ReferenceSchema>[]) {
+  const seen = new Set<string>();
+  return references.filter((reference) => {
+    const key = `${reference.kind}:${reference.locator}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+function basenameFromPath(value: string): string {
+  const normalized = value.replace(/[\\/]+$/, "");
+  const segments = normalized.split(/[\\/]/).filter(Boolean);
+  return segments.at(-1) ?? value;
+}
+
+function buildReferencesFromEvidences(evidences: MaaLogAnalyzerEvidence[]) {
+  const references = [];
+
+  for (const evidence of evidences) {
+    const sourceKey = readString(evidence.source_range.source_key);
+    const lineStart = readPositiveInteger(evidence.source_range.line_start);
+    if (sourceKey && lineStart) {
+      references.push(ReferenceSchema.parse({
+        kind: "log_line",
+        locator: `${sourceKey}:${lineStart}`,
+        label: `Evidence line ${lineStart}`,
+        sourceTool: "maa-log-analyzer",
+        path: sourceKey,
+        line: lineStart
+      }));
+    }
+
+    const imagePath = readString(evidence.payload.image_path);
+    if (imagePath) {
+      references.push(ReferenceSchema.parse({
+        kind: "image",
+        locator: imagePath,
+        label: basenameFromPath(imagePath),
+        sourceTool: "maa-log-analyzer",
+        path: imagePath,
+        meta: {
+          image_kind: readString(evidence.payload.image_kind) ?? "image",
+          scope_kind: readString(evidence.payload.scope_kind) ?? "scope",
+          scope_name: readString(evidence.payload.scope_name) ?? ""
+        }
+      }));
+    }
+  }
+
+  return dedupeReferences(references);
+}
+
+function buildImageEvidenceObservations(
+  tool: MaaLogAnalyzerMethod,
+  response: MaaLogAnalyzerEnvelope,
+  evidences: MaaLogAnalyzerEvidence[]
+) {
+  return evidences.flatMap((evidence) => {
+    const imagePath = readString(evidence.payload.image_path);
+    if (!imagePath) {
+      return [];
+    }
+
+    const imageKind = readString(evidence.payload.image_kind) ?? "image";
+    const scopeKind = readString(evidence.payload.scope_kind) ?? "scope";
+    const scopeName = readString(evidence.payload.scope_name) ?? "unknown";
+    const evidenceReferences = buildReferencesFromEvidences([evidence]);
+
+    return [ObservationSchema.parse({
+      id: `obs:${tool}:${response.request_id}:image:${evidence.evidence_id}`,
+      kind: "scope_image_evidence",
+      summary: `Associated ${imageKind} image ${basenameFromPath(imagePath)} with ${scopeKind} ${scopeName}`,
+      sourceTool: "maa-log-analyzer",
+      payload: {
+        evidence_id: evidence.evidence_id,
+        image_kind: imageKind,
+        image_path: imagePath,
+        scope_kind: scopeKind,
+        scope_name: scopeName,
+        task_id: evidence.source_range.task_id ?? null,
+        node_id: evidence.source_range.node_id ?? null,
+        occurrence_index: evidence.source_range.occurrence_index ?? null
+      },
+      references: dedupeReferences([
+        ...buildMaaLogAnalyzerCommonReferences(tool, response),
+        ...evidenceReferences
+      ])
+    })];
+  });
+}
 
 export function buildMaaLogAnalyzerCommonReferences(
   method: MaaLogAnalyzerMethod,
@@ -117,7 +237,7 @@ export function buildMaaLogAnalyzerObservationsForMethod(result: MaaLogAnalyzerT
           failed_node_count: z.number().int().nonnegative(),
           reco_failed_count: z.number().int().nonnegative()
         }),
-        evidences: z.array(z.unknown()).default([])
+        evidences: z.array(MaaLogAnalyzerEvidenceSchema).default([])
       }).parse(response.data);
 
       if (data.task) {
@@ -127,9 +247,13 @@ export function buildMaaLogAnalyzerObservationsForMethod(result: MaaLogAnalyzerT
           summary: `Task ${data.task.entry} (#${data.task.task_id}) ended with status ${data.task.status}`,
           sourceTool: "maa-log-analyzer",
           payload: data,
-          references
+          references: dedupeReferences([
+            ...references,
+            ...buildReferencesFromEvidences(data.evidences)
+          ])
         }));
       }
+      observations.push(...buildImageEvidenceObservations(tool, response, data.evidences));
       break;
     }
 
@@ -145,7 +269,7 @@ export function buildMaaLogAnalyzerObservationsForMethod(result: MaaLogAnalyzerT
           source_key: z.string().nullable(),
           line: z.number().int().positive().nullable()
         })),
-        evidences: z.array(z.unknown()).default([])
+        evidences: z.array(MaaLogAnalyzerEvidenceSchema).default([])
       }).parse(response.data);
 
       if (data.timeline.length > 0) {
@@ -170,10 +294,12 @@ export function buildMaaLogAnalyzerObservationsForMethod(result: MaaLogAnalyzerT
                 sourceTool: "maa-log-analyzer",
                 path: item.source_key ?? undefined,
                 line: item.line ?? undefined
-              }))
+              })),
+            ...buildReferencesFromEvidences(data.evidences)
           ]
         }));
       }
+      observations.push(...buildImageEvidenceObservations(tool, response, data.evidences));
       break;
     }
 
@@ -191,7 +317,7 @@ export function buildMaaLogAnalyzerObservationsForMethod(result: MaaLogAnalyzerT
           })),
           outcome: z.enum(["succeeded", "failed", "unknown"])
         })),
-        evidences: z.array(z.unknown()).default([])
+        evidences: z.array(MaaLogAnalyzerEvidenceSchema).default([])
       }).parse(response.data);
 
       if (data.history.length > 0) {
@@ -201,9 +327,13 @@ export function buildMaaLogAnalyzerObservationsForMethod(result: MaaLogAnalyzerT
           summary: `Collected ${data.history.length} next-list history entries`,
           sourceTool: "maa-log-analyzer",
           payload: data,
-          references
+          references: dedupeReferences([
+            ...references,
+            ...buildReferencesFromEvidences(data.evidences)
+          ])
         }));
       }
+      observations.push(...buildImageEvidenceObservations(tool, response, data.evidences));
       break;
     }
 
@@ -225,9 +355,9 @@ export function buildMaaLogAnalyzerObservationsForMethod(result: MaaLogAnalyzerT
           node_id: z.number().int().optional(),
           name: z.string().min(1),
           occurrence_index: z.number().int().positive().optional(),
-          relation: z.enum(["self", "parent", "ancestor"])
+            relation: z.enum(["self", "parent", "ancestor"])
         })),
-        evidences: z.array(z.unknown()).default([])
+        evidences: z.array(MaaLogAnalyzerEvidenceSchema).default([])
       }).parse(response.data);
 
       if (data.chain.length > 0) {
@@ -237,9 +367,13 @@ export function buildMaaLogAnalyzerObservationsForMethod(result: MaaLogAnalyzerT
           summary: `Collected parent chain with ${data.chain.length} scopes`,
           sourceTool: "maa-log-analyzer",
           payload: data,
-          references
+          references: dedupeReferences([
+            ...references,
+            ...buildReferencesFromEvidences(data.evidences)
+          ])
         }));
       }
+      observations.push(...buildImageEvidenceObservations(tool, response, data.evidences));
       break;
     }
 
@@ -250,7 +384,7 @@ export function buildMaaLogAnalyzerObservationsForMethod(result: MaaLogAnalyzerT
           line: z.number().int().positive(),
           text: z.string()
         })),
-        evidences: z.array(z.unknown()).default([])
+        evidences: z.array(MaaLogAnalyzerEvidenceSchema).default([])
       }).parse(response.data);
 
       if (data.lines.length > 0) {
@@ -268,13 +402,15 @@ export function buildMaaLogAnalyzerObservationsForMethod(result: MaaLogAnalyzerT
               kind: "log_line",
               locator: `${item.source_key}:${item.line}`,
               label: item.text.slice(0, 80),
-              sourceTool: "maa-log-analyzer",
-              path: item.source_key,
-              line: item.line
-            }))
+                sourceTool: "maa-log-analyzer",
+                path: item.source_key,
+                line: item.line
+            })),
+            ...buildReferencesFromEvidences(data.evidences)
           ]
         }));
       }
+      observations.push(...buildImageEvidenceObservations(tool, response, data.evidences));
       break;
     }
   }
@@ -298,7 +434,8 @@ export function buildMaaLogAnalyzerFindings(results: MaaLogAnalyzerToolResult[])
         node_count: z.number().int().nonnegative(),
         failed_node_count: z.number().int().nonnegative(),
         reco_failed_count: z.number().int().nonnegative()
-      })
+      }),
+      evidences: z.array(MaaLogAnalyzerEvidenceSchema).default([])
     }).parse(taskOverview.response.data);
 
     if (data.task) {

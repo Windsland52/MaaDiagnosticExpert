@@ -1,10 +1,11 @@
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { normalizeMaaSupportExtensionRuntimeInput } from "../adapters/index.js";
+import { toCoreError } from "../errors.js";
 
 const tempDirs: string[] = [];
 
@@ -39,6 +40,7 @@ async function createMaaProjectFixture(): Promise<string> {
           {
             name: "DailyRewards",
             entry: "StartNode",
+            description: "",
             group: "Daily",
             option: ["UsePotion"]
           },
@@ -51,6 +53,7 @@ async function createMaaProjectFixture(): Promise<string> {
         option: {
           UsePotion: {
             type: "select",
+            description: "",
             cases: [
               {
                 name: "on",
@@ -119,6 +122,28 @@ describe("maa-support-extension runtime", () => {
     expect((output.profileHints ?? []).some((item) => item.value === "maa-support-extension")).toBe(true);
   });
 
+  it("supports symlinked project roots and normalizes empty optional strings", async () => {
+    const projectRoot = await createMaaProjectFixture();
+    const linkRoot = `${projectRoot}-link`;
+    tempDirs.push(linkRoot);
+    await symlink(projectRoot, linkRoot, "dir");
+
+    const output = await normalizeMaaSupportExtensionRuntimeInput({
+      project: {
+        project_root: linkRoot,
+        interface_file: "assets/interface.json"
+      },
+      queries: {
+        task_definitions: ["DailyRewards"],
+        node_definitions: [],
+        diagnostics: true
+      }
+    });
+
+    expect((output.observations ?? []).some((item) => item.kind === "maa_task_definition")).toBe(true);
+    expect((output.findings ?? []).some((item) => item.kind === "maa_project_definition_errors")).toBe(true);
+  });
+
   it("reports missing task definitions as missing evidence", async () => {
     const projectRoot = await createMaaProjectFixture();
 
@@ -136,5 +161,45 @@ describe("maa-support-extension runtime", () => {
 
     expect(output.missingEvidence ?? []).toHaveLength(1);
     expect(output.missingEvidence?.[0]?.description).toContain("MissingTask");
+  });
+
+  it("surfaces permission errors as structured filesystem diagnostics", async () => {
+    const projectRoot = await createMaaProjectFixture();
+    const pipelineRoot = path.join(projectRoot, "assets", "resource", "pipeline");
+
+    await chmod(pipelineRoot, 0o000);
+
+    let thrown: unknown = null;
+    try {
+      await normalizeMaaSupportExtensionRuntimeInput({
+        project: {
+          project_root: projectRoot,
+          interface_file: "assets/interface.json"
+        },
+        queries: {
+          task_definitions: [],
+          node_definitions: [],
+          diagnostics: true
+        }
+      });
+    }
+    catch (error) {
+      thrown = error;
+    }
+    finally {
+      await chmod(pipelineRoot, 0o755);
+    }
+
+    const normalized = toCoreError(thrown, {
+      meta: {
+        command: "run-mse-runtime"
+      }
+    });
+
+    expect(normalized.code).toBe("io_error");
+    expect(normalized.message).toContain("Permission denied while reading Maa project files");
+    expect(normalized.details[0]?.code).toBe("EACCES");
+    expect(normalized.meta.category).toBe("filesystem_permission");
+    expect(Array.isArray(normalized.meta.suggested_actions)).toBe(true);
   });
 });

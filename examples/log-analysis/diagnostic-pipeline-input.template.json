@@ -1,0 +1,73 @@
+{
+  "apiVersion": "diagnostic-pipeline/v1",
+  "profileId": "generic-maa-log",
+  "filesystem": {
+    "mode": "runtime",
+    "input": {
+      "roots": [
+        "/absolute/path/to/your/exported-log-root"
+      ],
+      "includeGlobs": [
+        "config/**/*",
+        "on_error/**/*",
+        "*.log",
+        "*.txt"
+      ],
+      "excludeGlobs": [],
+      "maxFiles": 200,
+      "parseConfigFiles": true,
+      "includeImages": true
+    }
+  },
+  "mla": {
+    "mode": "runtime",
+    "input": {
+      "profileId": "generic-maa-log",
+      "session_id": "replace-with-your-session-id",
+      "inputs": [
+        {
+          "path": "/absolute/path/to/your/logs-or-zip",
+          "kind": "folder"
+        }
+      ],
+      "queries": {
+        "task_overview": {},
+        "raw_lines": {
+          "task_id": 1,
+          "keywords": [
+            "Error",
+            "timeout"
+          ],
+          "limit": 20
+        }
+      }
+    }
+  },
+  "mse": {
+    "mode": "runtime",
+    "input": {
+      "project": {
+        "project_root": "/absolute/path/to/your/maa-project-root",
+        "interface_file": "assets/interface.json"
+      },
+      "queries": {
+        "task_definitions": [],
+        "node_definitions": [],
+        "diagnostics": true
+      }
+    }
+  },
+  "retrieval": {
+    "enabled": true,
+    "corpusIds": [
+      "maafw-docs",
+      "diagnostic-guides"
+    ],
+    "queryHints": [
+      "interface.json task option",
+      "next on_error timeout"
+    ],
+    "limitPerQuery": 5,
+    "maxHits": 10
+  }
+}

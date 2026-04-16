@@ -36,6 +36,39 @@ describe("core errors", () => {
     expect(normalized.retryable).toBe(false);
   });
 
+  it("preserves explicit core error metadata from runtime errors", () => {
+    const error = Object.assign(
+      new Error("Permission denied while reading Maa project files during scandir: /tmp/project"),
+      {
+        code: "EACCES",
+        coreCode: "io_error",
+        retryable: false,
+        details: [
+          {
+            path: ["project", "project_root"],
+            message: "Permission denied during scandir on /tmp/project",
+            code: "EACCES"
+          }
+        ],
+        meta: {
+          category: "filesystem_permission",
+          suggested_actions: ["Grant permission and rerun."]
+        }
+      }
+    );
+
+    const normalized = toCoreError(error, {
+      meta: {
+        command: "run-mse-runtime"
+      }
+    });
+
+    expect(normalized.code).toBe("io_error");
+    expect(normalized.details).toHaveLength(1);
+    expect(normalized.meta.category).toBe("filesystem_permission");
+    expect(normalized.meta.command).toBe("run-mse-runtime");
+  });
+
   it("renders error JSON", () => {
     const error = createCoreError({
       code: "internal_error",

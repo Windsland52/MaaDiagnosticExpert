@@ -242,4 +242,216 @@ describe("diagnostic pipeline", () => {
     expect(result.diagnosticMeta.profileHints.some((item) => item.kind === "recommended_tool")).toBe(true);
     expect(result.report?.format).toBe("markdown");
   });
+
+  it("does not treat successful tasks with failed node events as a contradiction", async () => {
+    const result = await runDiagnosticPipeline({
+      apiVersion: "diagnostic-pipeline/v1",
+      mla: {
+        mode: "result",
+        input: {
+          results: [
+            {
+              tool: "parse_log_bundle",
+              response: {
+                request_id: "mla-session",
+                api_version: "v1",
+                ok: true,
+                data: {
+                  session_id: "session-2",
+                  task_count: 1,
+                  event_count: 8,
+                  warnings: []
+                },
+                meta: {
+                  duration_ms: 1,
+                  warnings: []
+                },
+                error: null
+              }
+            },
+            {
+              tool: "get_task_overview",
+              response: {
+                request_id: "mla-task",
+                api_version: "v1",
+                ok: true,
+                data: {
+                  task: {
+                    task_id: 42,
+                    entry: "AutoCollectStart",
+                    status: "success",
+                    duration_ms: 120000
+                  },
+                  summary: {
+                    node_count: 12,
+                    failed_node_count: 1,
+                    reco_failed_count: 3
+                  },
+                  evidences: []
+                },
+                meta: {
+                  duration_ms: 1,
+                  warnings: []
+                },
+                error: null
+              }
+            },
+            {
+              tool: "get_node_timeline",
+              response: {
+                request_id: "mla-node",
+                api_version: "v1",
+                ok: true,
+                data: {
+                  timeline: [
+                    {
+                      scope_id: "node-42",
+                      occurrence_index: 1,
+                      ts: "2026-04-16T00:00:00Z",
+                      event: "Node.Action.Starting",
+                      node_id: 300000637,
+                      name: "AutoCollectRoute1GotoFind1",
+                      source_key: "maafw.log",
+                      line: 100
+                    },
+                    {
+                      scope_id: "node-42",
+                      occurrence_index: 1,
+                      ts: "2026-04-16T00:01:00Z",
+                      event: "Node.Action.Failed",
+                      node_id: 300000637,
+                      name: "AutoCollectRoute1GotoFind1",
+                      source_key: "maafw.log",
+                      line: 120
+                    }
+                  ],
+                  evidences: []
+                },
+                meta: {
+                  duration_ms: 1,
+                  warnings: []
+                },
+                error: null
+              }
+            }
+          ]
+        }
+      },
+      retrieval: {
+        enabled: false,
+        corpusIds: [],
+        queryHints: [],
+        limitPerQuery: 1,
+        maxHits: 1
+      }
+    });
+
+    expect(result.diagnosticMeta.findings.some((item) => item.kind === "task_status_conflict")).toBe(false);
+  });
+
+  it("does not mark expected recognition retries as task status conflict", async () => {
+    const result = await runDiagnosticPipeline({
+      apiVersion: "diagnostic-pipeline/v1",
+      mla: {
+        mode: "result",
+        input: {
+          results: [
+            {
+              tool: "parse_log_bundle",
+              response: {
+                request_id: "mla-session-2",
+                api_version: "v1",
+                ok: true,
+                data: {
+                  session_id: "session-3",
+                  task_count: 1,
+                  event_count: 8,
+                  warnings: []
+                },
+                meta: {
+                  duration_ms: 1,
+                  warnings: []
+                },
+                error: null
+              }
+            },
+            {
+              tool: "get_task_overview",
+              response: {
+                request_id: "mla-task-2",
+                api_version: "v1",
+                ok: true,
+                data: {
+                  task: {
+                    task_id: 43,
+                    entry: "DailyRewards",
+                    status: "success",
+                    duration_ms: 1000
+                  },
+                  summary: {
+                    node_count: 5,
+                    failed_node_count: 1,
+                    reco_failed_count: 4
+                  },
+                  evidences: []
+                },
+                meta: {
+                  duration_ms: 1,
+                  warnings: []
+                },
+                error: null
+              }
+            },
+            {
+              tool: "get_node_timeline",
+              response: {
+                request_id: "mla-node-2",
+                api_version: "v1",
+                ok: true,
+                data: {
+                  timeline: [
+                    {
+                      scope_id: "node-43",
+                      occurrence_index: 1,
+                      ts: "2026-04-16T00:00:00Z",
+                      event: "Node.Recognition.Starting",
+                      node_id: 12,
+                      name: "RetryNode",
+                      source_key: "maa.log",
+                      line: 200
+                    },
+                    {
+                      scope_id: "node-43",
+                      occurrence_index: 1,
+                      ts: "2026-04-16T00:00:01Z",
+                      event: "Node.Recognition.Failed",
+                      node_id: 12,
+                      name: "RetryNode",
+                      source_key: "maa.log",
+                      line: 210
+                    }
+                  ],
+                  evidences: []
+                },
+                meta: {
+                  duration_ms: 1,
+                  warnings: []
+                },
+                error: null
+              }
+            }
+          ]
+        }
+      },
+      retrieval: {
+        enabled: false,
+        corpusIds: [],
+        queryHints: [],
+        limitPerQuery: 1,
+        maxHits: 1
+      }
+    });
+
+    expect(result.diagnosticMeta.findings.some((item) => item.kind === "task_status_conflict")).toBe(false);
+  });
 });

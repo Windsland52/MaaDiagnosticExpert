@@ -98,7 +98,32 @@ pnpm run run:core-cli -- search-local-corpus --input /path/to/search-input.json
 - `session_id`
 - `inputs[0].path`
 - `inputs[0].kind`
+- `inputs[0].focus`
 - `queries.raw_lines.task_id`
+
+如果 `inputs[0].kind=folder`，默认仍然沿用 MLA 当前的目录加载逻辑。
+
+当一个日志目录混入多次历史运行，建议通过 `inputs[0].focus` 先给出用户描述里已有的锚点，例如：
+
+- `keywords`
+- `started_after`
+- `started_before`
+
+这样 `core` 会先把 session 收窄到更相关的日志文件，再去执行 `task_id` 级别查询，避免因为历史复用 `task_id` 把任务选偏。
+
+如果仓库下存在已构建的 `sample/MaaLogAnalyzer`，`core` 会优先加载它的 `maa-log-parser` / `maa-log-tools` dist，而不是只吃 npm 已发布版本。
+
+手动刷新 sample 构建可执行：
+
+```bash
+pnpm run build:sample-mla
+```
+
+如果你想显式指定另一个本地 MLA checkout，可设置：
+
+```bash
+MAA_DIAGNOSTIC_LOCAL_MLA_ROOT=/abs/path/to/MaaLogAnalyzer
+```
 
 ## 第二步：生成 `CoreResult`
 
@@ -124,10 +149,19 @@ pnpm run run:core-cli -- render-report \
 默认会产出一个最小 markdown 报告，至少包含：
 
 - Summary
+- Task Semantics
+- Screenshot Evidence
 - Observations
 - Findings
 - Retrieval Hits
 - Missing Evidence
+
+其中 `Screenshot Evidence` 会明确区分两类信息：
+
+- 日志包里是否存在截图文件
+- MLA 是否把截图匹配到了当前 focus 的 task/node
+
+不要把这两类证据混为一谈。前者只说明 bundle 里有文件，后者才是当前分析范围内的直接截图证据。
 
 ## 第四步：如果想走 Python 包装层
 

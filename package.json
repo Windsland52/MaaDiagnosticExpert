@@ -5,6 +5,7 @@
   "packageManager": "pnpm@10.31.0",
   "scripts": {
     "build": "pnpm --filter @maa-diagnostic-expert/core run build",
+    "build:sample-mla": "pnpm -C sample/MaaLogAnalyzer build:packages",
     "build:python-mcp": "uv --cache-dir .uv-cache build --directory python/mcp",
     "contracts": "pnpm --filter @maa-diagnostic-expert/core run generate:contracts",
     "lock:python-mcp": "uv --cache-dir .uv-cache lock --directory python/mcp",

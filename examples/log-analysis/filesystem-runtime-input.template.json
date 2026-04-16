@@ -1,0 +1,16 @@
+{
+  "profileId": "generic-maa-log",
+  "roots": [
+    "/absolute/path/to/your/exported-log-root"
+  ],
+  "includeGlobs": [
+    "config/**/*",
+    "on_error/**/*",
+    "*.log",
+    "*.txt"
+  ],
+  "excludeGlobs": [],
+  "maxFiles": 200,
+  "parseConfigFiles": true,
+  "includeImages": true
+}

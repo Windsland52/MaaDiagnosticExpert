@@ -63,6 +63,16 @@ type ProjectSnapshot = MaaSupportExtensionProjectSummary & {
   diagnostics: MaaSupportExtensionDiagnostic[];
 };
 
+type FilesystemAccessError = Error & {
+  code?: unknown;
+  path?: unknown;
+  syscall?: unknown;
+  coreCode?: unknown;
+  retryable?: unknown;
+  details?: unknown;
+  meta?: unknown;
+};
+
 function toRepoRelative(projectRoot: string, absolutePath: string): string {
   return path.relative(projectRoot, absolutePath).split(path.sep).join("/");
 }
@@ -85,6 +95,15 @@ function normalizeStringList(value: unknown): string[] {
   return [];
 }
 
+function normalizeOptionalString(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
 function inferResourceScope(relativePath: string): string | null {
   const normalized = relativePath.toLowerCase();
   if (normalized.includes("/resource_adb/")) {
@@ -97,6 +116,61 @@ function inferResourceScope(relativePath: string): string | null {
     return "default";
   }
   return null;
+}
+
+function isPermissionDeniedError(error: unknown): error is FilesystemAccessError {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const errorWithAccessCode = error as FilesystemAccessError;
+  return errorWithAccessCode.code === "EACCES" || errorWithAccessCode.code === "EPERM";
+}
+
+function buildFilesystemPermissionError(
+  error: FilesystemAccessError,
+  projectRoot: string
+): FilesystemAccessError {
+  const accessPath = typeof error.path === "string" && error.path.length > 0
+    ? error.path
+    : projectRoot;
+  const syscall = typeof error.syscall === "string" && error.syscall.length > 0
+    ? error.syscall
+    : "filesystem";
+  const hostHint = accessPath.startsWith("/mnt/") || projectRoot.startsWith("/mnt/")
+    ? "wsl_windows_acl_mismatch"
+    : "filesystem_acl_restriction";
+
+  const wrapped = new Error(
+    `Permission denied while reading Maa project files during ${syscall}: ${accessPath}`
+  ) as FilesystemAccessError;
+
+  wrapped.code = typeof error.code === "string" ? error.code : "EACCES";
+  wrapped.coreCode = "io_error";
+  wrapped.retryable = false;
+  wrapped.details = [
+    {
+      path: ["project", "project_root"],
+      message: `Permission denied during ${syscall} on ${accessPath}`,
+      code: wrapped.code
+    }
+  ];
+  wrapped.meta = {
+    adapter: "maa-support-extension-runtime",
+    category: "filesystem_permission",
+    operation: syscall,
+    path: accessPath,
+    project_root: projectRoot,
+    host_hint: hostHint,
+    original_message: error.message,
+    suggested_actions: [
+      "Grant read and execute permission on the reported directory tree, then rerun the same command.",
+      "If the project is under /mnt on WSL, fix Windows-side ACLs or copy the project into the Linux filesystem before rerunning.",
+      "Check whether pipeline/resource directories or symlink targets were created on another OS account and are not readable from the current runtime."
+    ]
+  };
+
+  return wrapped;
 }
 
 async function locateInterfaceFile(projectRoot: string, explicit?: string): Promise<LocatedFile> {
@@ -134,7 +208,7 @@ async function parseInterfaceFile(projectRoot: string, explicit?: string) {
   const content = await readFile(located.absolutePath, "utf8");
   const parsed = z.object({
     interface_version: z.number().int().optional(),
-    name: z.string().min(1).optional(),
+    name: z.string().optional(),
     controller: z.array(z.object({
       name: z.string().min(1)
     })).default([]),
@@ -183,9 +257,9 @@ async function parseTaskFile(projectRoot: string, absolutePath: string): Promise
 
   const tasks = (parsed.task ?? []).map((task, index) => MaaSupportExtensionTaskDefinitionSchema.parse({
     name: task.name,
-    entry: typeof task.entry === "string" ? task.entry : null,
-    label: typeof task.label === "string" ? task.label : null,
-    description: typeof task.description === "string" ? task.description : null,
+    entry: normalizeOptionalString(task.entry),
+    label: normalizeOptionalString(task.label),
+    description: normalizeOptionalString(task.description),
     groups: normalizeStringList(task.group),
     controllers: normalizeStringList(task.controller),
     resources: normalizeStringList(task.resource),
@@ -215,9 +289,9 @@ async function parseTaskFile(projectRoot: string, absolutePath: string): Promise
 
     return {
       name,
-      type: typeof option.type === "string" ? option.type : null,
-      label: typeof option.label === "string" ? option.label : null,
-      description: typeof option.description === "string" ? option.description : null,
+      type: normalizeOptionalString(option.type),
+      label: normalizeOptionalString(option.label),
+      description: normalizeOptionalString(option.description),
       controllers: normalizeStringList(option.controller),
       resources: normalizeStringList(option.resource),
       caseNames: cases
@@ -270,19 +344,42 @@ async function collectTaskFiles(projectRoot: string, interfaceRelativePath: stri
 }
 
 async function collectPipelineFiles(projectRoot: string): Promise<string[]> {
-  return fg(["**/pipeline/**/*.json", "**/pipeline/**/*.jsonc"], {
-    cwd: projectRoot,
-    absolute: true,
-    onlyFiles: true,
-    ignore: [
-      "**/.git/**",
-      "**/node_modules/**",
-      "**/.venv/**",
-      "**/dist/**",
-      "**/build/**",
-      "**/.pnpm-store/**"
-    ]
-  });
+  const candidateRoots = [
+    path.resolve(projectRoot, "assets/resource/pipeline"),
+    path.resolve(projectRoot, "assets/resource_adb/pipeline"),
+    path.resolve(projectRoot, "assets/resource_wlroots/pipeline"),
+    path.resolve(projectRoot, "pipeline")
+  ];
+
+  const collected = await Promise.all(candidateRoots.map(async (pipelineRoot) => {
+    try {
+      return await fg(["**/*.json", "**/*.jsonc"], {
+        cwd: pipelineRoot,
+        absolute: true,
+        onlyFiles: true,
+        followSymbolicLinks: true,
+        ignore: [
+          "**/.git/**",
+          "**/node_modules/**",
+          "**/.venv/**",
+          "**/dist/**",
+          "**/build/**",
+          "**/.pnpm-store/**"
+        ]
+      });
+    }
+    catch (error) {
+      const code = typeof error === "object" && error !== null && "code" in error
+        ? (error as { code?: unknown }).code
+        : null;
+      if (code === "ENOENT") {
+        return [];
+      }
+      throw error;
+    }
+  }));
+
+  return collected.flat();
 }
 
 function buildProjectDiagnostics(
@@ -375,7 +472,7 @@ async function buildProjectSnapshot(
   return {
     project_root: projectRoot,
     interface_file: located.relativePath,
-    project_name: parsed.name ?? null,
+    project_name: normalizeOptionalString(parsed.name),
     interface_version: parsed.interface_version ?? null,
     controller_names: parsed.controller.map((item) => item.name),
     resource_names: parsed.resource.map((item) => item.name),
@@ -456,11 +553,21 @@ export async function normalizeMaaSupportExtensionRuntimeInput(
   input: MaaSupportExtensionRuntimeInput
 ): Promise<AdapterRunOutput> {
   const normalized = MaaSupportExtensionRuntimeInputSchema.parse(input);
-  const results = MaaSupportExtensionBatchInputSchema.parse({
-    profileId: normalized.profileId ?? null,
-    results: await runRuntimeCalls(normalized)
-  });
-  return normalizeMaaSupportExtensionResults(results);
+  const projectRoot = path.resolve(normalized.project.project_root);
+
+  try {
+    const results = MaaSupportExtensionBatchInputSchema.parse({
+      profileId: normalized.profileId ?? null,
+      results: await runRuntimeCalls(normalized)
+    });
+    return normalizeMaaSupportExtensionResults(results);
+  }
+  catch (error) {
+    if (isPermissionDeniedError(error)) {
+      throw buildFilesystemPermissionError(error, projectRoot);
+    }
+    throw error;
+  }
 }
 
 export const maaSupportExtensionRuntimeAdapter: ToolAdapter<MaaSupportExtensionRuntimeInput> = {

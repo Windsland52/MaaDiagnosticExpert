@@ -61,6 +61,56 @@
                           "folder",
                           "zip"
                         ]
+                      },
+                      "focus": {
+                        "type": "object",
+                        "properties": {
+                          "keywords": {
+                            "default": [],
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          },
+                          "started_after": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "started_before": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "keywords"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "include_globs": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "exclude_globs": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "include_history_logs": {
+                        "type": "boolean"
+                      },
+                      "follow_symlinks": {
+                        "type": "boolean"
+                      },
+                      "max_files": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 200
                       }
                     },
                     "required": [
