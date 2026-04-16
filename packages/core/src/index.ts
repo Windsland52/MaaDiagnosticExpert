@@ -35,6 +35,19 @@ export {
 } from "./models/finding.js";
 
 export {
+  CorpusCatalogSchema,
+  CorpusSearchInputSchema,
+  CorpusSearchResultSchema,
+  CorpusSearchStatsSchema,
+  CorpusSummarySchema,
+  type CorpusCatalog,
+  type CorpusSearchInput,
+  type CorpusSearchResult,
+  type CorpusSearchStats,
+  type CorpusSummary
+} from "./models/corpus.js";
+
+export {
   MissingEvidenceSchema,
   ProfileHintKindSchema,
   ProfileHintSchema,
@@ -63,6 +76,15 @@ export {
 } from "./models/core-error.js";
 
 export {
+  ContractSummarySchema,
+  ProfileCatalogSchema,
+  RuntimeInfoSchema,
+  type ContractSummary,
+  type ProfileCatalog,
+  type RuntimeInfo
+} from "./models/runtime-info.js";
+
+export {
   CoreResultSchema,
   DiagnosticMetaSchema,
   RawToolResultsSchema,
@@ -83,6 +105,19 @@ export {
   getBuiltinProfile,
   listBuiltinProfiles
 } from "./profiles/builtin.js";
+
+export {
+  buildProfileCatalog,
+  buildRuntimeInfo
+} from "./runtime-info.js";
+
+export {
+  BuiltinCorpusDefinitions,
+  buildCorpusCatalog,
+  listBuiltinCorpora,
+  searchLocalCorpora,
+  type LocalCorpusDefinition
+} from "./retrieval/local.js";
 
 export {
   loadProfileFromFile,

@@ -40,6 +40,37 @@ class CoreCliRuntimeTests(unittest.TestCase):
         self.assertEqual(profile["id"], "generic-maa-log")
         self.assertTrue(profile["recommendedTools"])
 
+    def test_list_builtin_profiles(self) -> None:
+        catalog = self.runtime.list_builtin_profiles()
+        self.assertEqual(catalog["apiVersion"], "profile-catalog/v1")
+        self.assertGreaterEqual(len(catalog["profiles"]), 1)
+
+    def test_list_builtin_corpora(self) -> None:
+        catalog = self.runtime.list_builtin_corpora()
+        self.assertEqual(catalog["apiVersion"], "corpus-catalog/v1")
+        self.assertTrue(any(item["id"] == "diagnostic-guides" for item in catalog["corpora"]))
+
+    def test_search_local_corpus(self) -> None:
+        result = self.runtime.search_local_corpus(
+            {
+                "apiVersion": "retrieval-query/v1",
+                "query": "runtime discovery contract",
+                "corpusIds": ["diagnostic-guides"],
+                "limit": 3,
+            }
+        )
+
+        self.assertEqual(result["apiVersion"], "retrieval-result/v1")
+        self.assertEqual(result["corpusIds"], ["diagnostic-guides"])
+        self.assertGreaterEqual(result["stats"]["fileCount"], 1)
+        self.assertGreaterEqual(len(result["hits"]), 1)
+
+    def test_describe_runtime(self) -> None:
+        runtime_info = self.runtime.describe_runtime()
+        self.assertEqual(runtime_info["apiVersion"], "runtime/v1")
+        self.assertIn("describe-runtime", runtime_info["commands"])
+        self.assertIn("diagnostic-guides", runtime_info["builtinCorpusIds"])
+
     def test_missing_profile_raises_structured_core_error(self) -> None:
         with self.assertRaises(CoreCliError) as context:
             self.runtime.show_builtin_profile("missing")
@@ -94,6 +125,28 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         self.assertIn('"$id": "https://maa-diagnostic-expert/contracts/error.schema.json"', stdout.getvalue())
+
+    def test_invoke_describe_runtime(self) -> None:
+        stdout = StringIO()
+        stderr = StringIO()
+
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = cli_main(["invoke", "--tool", "describe_runtime"])
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(stderr.getvalue(), "")
+        self.assertIn('"apiVersion": "runtime/v1"', stdout.getvalue())
+
+    def test_invoke_list_builtin_corpora(self) -> None:
+        stdout = StringIO()
+        stderr = StringIO()
+
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = cli_main(["invoke", "--tool", "list_builtin_corpora"])
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(stderr.getvalue(), "")
+        self.assertIn('"apiVersion": "corpus-catalog/v1"', stdout.getvalue())
 
     def test_invoke_empty_result(self) -> None:
         stdout = StringIO()
@@ -160,6 +213,7 @@ class McpServerTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertGreaterEqual(len(result.tools), 5)
         self.assertTrue(any(tool.name == "empty_result" for tool in result.tools))
+        self.assertTrue(any(tool.name == "search_local_corpus" for tool in result.tools))
         self.assertTrue(all(tool.inputSchema for tool in result.tools))
 
     async def test_tools_call_success(self) -> None:

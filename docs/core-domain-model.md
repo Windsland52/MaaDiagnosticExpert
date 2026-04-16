@@ -209,6 +209,10 @@
 - `run-mla-runtime`
 - `validate-profile`
 - `show-builtin-profile`
+- `list-builtin-profiles`
+- `list-builtin-corpora`
+- `search-local-corpus`
+- `describe-runtime`
 
 同时 CLI 还支持全局参数 `--json-error`，用于在失败时输出 `CoreError` JSON。
 

@@ -112,6 +112,11 @@ contracts/        # 跨语言共享的 JSON schema / profile schema
 - `core-result.schema.json`
 - `error.schema.json`
 - `profile.schema.json`
+- `profile-catalog.schema.json`
+- `runtime-info.schema.json`
+- `corpus-catalog.schema.json`
+- `corpus-search-input.schema.json`
+- `corpus-search-result.schema.json`
 - `maa-log-analyzer-batch-input.schema.json`
 - `maa-log-analyzer-runtime-input.schema.json`
 
@@ -139,6 +144,55 @@ Python MCP 锁定与构建：
 pnpm run lock:python-mcp
 pnpm run build:python-mcp
 ```
+
+## 运行时发现
+
+外部 agent / MCP client 不应该硬编码本项目当前支持的命令、profile 或 contract。
+
+推荐先做运行时发现，再决定后续调用：
+
+```bash
+pnpm run run:core-cli -- describe-runtime
+pnpm run run:core-cli -- list-builtin-profiles
+pnpm run run:core-cli -- list-builtin-corpora
+```
+
+其中：
+
+- `describe-runtime` 返回运行时名称、版本、命令列表、适配器列表、contract 列表
+- `list-builtin-profiles` 返回内置 profile 目录，便于外部系统决定默认策略或做参数校验
+- `list-builtin-corpora` 返回内置本地 corpus 目录，便于外部系统决定检索范围
+
+如果要做确定性的本地文档检索：
+
+```bash
+pnpm run run:core-cli -- search-local-corpus --input /path/to/search-input.json
+```
+
+对应输入 contract：
+
+- `contracts/corpus-search-input.schema.json`
+
+对应输出 contract：
+
+- `contracts/corpus-search-result.schema.json`
+
+如果走 Python MCP 包装层，也提供了同名工具：
+
+```bash
+pnpm run run:python-mcp-cli -- invoke --tool describe_runtime
+pnpm run run:python-mcp-cli -- invoke --tool list_builtin_profiles
+pnpm run run:python-mcp-cli -- invoke --tool list_builtin_corpora
+pnpm run run:python-mcp-cli -- invoke --tool search_local_corpus --input /path/to/search-input.json
+```
+
+这两项能力的目标不是“分析日志”，而是让外部系统先识别：
+
+1. 当前本地 runtime 是什么版本
+2. 当前暴露了哪些确定性能力
+3. 当前有哪些可消费 contract
+4. 当前有哪些内置 profile
+5. 当前有哪些内置 corpus
 
 ## 依赖方向
 

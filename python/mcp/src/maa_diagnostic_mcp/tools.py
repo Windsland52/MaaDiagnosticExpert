@@ -47,6 +47,11 @@ def _nullable_string_schema(description: str) -> dict[str, Any]:
 
 CORE_RESULT_CONTRACT = load_contract("core_result")
 PROFILE_CONTRACT = load_contract("profile")
+PROFILE_CATALOG_CONTRACT = load_contract("profile_catalog")
+RUNTIME_INFO_CONTRACT = load_contract("runtime_info")
+CORPUS_CATALOG_CONTRACT = load_contract("corpus_catalog")
+CORPUS_SEARCH_INPUT_CONTRACT = load_contract("corpus_search_input")
+CORPUS_SEARCH_RESULT_CONTRACT = load_contract("corpus_search_result")
 MLA_BATCH_INPUT_CONTRACT = load_contract("maa_log_analyzer_batch_input")
 MLA_RUNTIME_INPUT_CONTRACT = load_contract("maa_log_analyzer_runtime_input")
 
@@ -106,6 +111,8 @@ SHOW_BUILTIN_PROFILE_INPUT_SCHEMA = _object_schema(
     },
     required=["profile_id"],
 )
+
+EMPTY_OBJECT_INPUT_SCHEMA = _object_schema({})
 
 
 @dataclass(frozen=True, slots=True)
@@ -185,6 +192,34 @@ DEFAULT_TOOL_SPECS = [
         input_contract=None,
         output_contract="profile",
     ),
+    ToolSpec(
+        name="list_builtin_profiles",
+        description="List builtin profiles exposed by the local core runtime.",
+        input_schema=EMPTY_OBJECT_INPUT_SCHEMA,
+        input_contract=None,
+        output_contract="profile_catalog",
+    ),
+    ToolSpec(
+        name="list_builtin_corpora",
+        description="List builtin local corpora exposed by the local core runtime.",
+        input_schema=EMPTY_OBJECT_INPUT_SCHEMA,
+        input_contract=None,
+        output_contract="corpus_catalog",
+    ),
+    ToolSpec(
+        name="search_local_corpus",
+        description="Run deterministic local corpus search and return retrieval hits.",
+        input_schema=CORPUS_SEARCH_INPUT_CONTRACT,
+        input_contract="corpus_search_input",
+        output_contract="corpus_search_result",
+    ),
+    ToolSpec(
+        name="describe_runtime",
+        description="Describe the local core runtime, commands, adapters and contracts.",
+        input_schema=EMPTY_OBJECT_INPUT_SCHEMA,
+        input_contract=None,
+        output_contract="runtime_info",
+    ),
 ]
 
 
@@ -228,6 +263,18 @@ class CoreToolset:
     def show_builtin_profile(self, profile_id: str) -> dict[str, Any]:
         return self.runtime.show_builtin_profile(profile_id)
 
+    def list_builtin_profiles(self) -> dict[str, Any]:
+        return self.runtime.list_builtin_profiles()
+
+    def list_builtin_corpora(self) -> dict[str, Any]:
+        return self.runtime.list_builtin_corpora()
+
+    def search_local_corpus(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self.runtime.search_local_corpus(payload)
+
+    def describe_runtime(self) -> dict[str, Any]:
+        return self.runtime.describe_runtime()
+
     def invoke(
         self,
         tool_name: str,
@@ -266,6 +313,20 @@ class CoreToolset:
             if not profile_id:
                 raise ValueError("profile_id is required for show_builtin_profile")
             return self.show_builtin_profile(profile_id)
+
+        if tool_name == "list_builtin_profiles":
+            return self.list_builtin_profiles()
+
+        if tool_name == "list_builtin_corpora":
+            return self.list_builtin_corpora()
+
+        if tool_name == "search_local_corpus":
+            if payload is None:
+                raise ValueError("payload is required for search_local_corpus")
+            return self.search_local_corpus(payload)
+
+        if tool_name == "describe_runtime":
+            return self.describe_runtime()
 
         raise KeyError(f"Unknown tool: {tool_name}")
 

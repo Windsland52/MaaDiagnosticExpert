@@ -113,3 +113,15 @@ class CoreCliRuntime:
 
     def show_builtin_profile(self, profile_id: str) -> dict[str, Any]:
         return self._run("show-builtin-profile", args=["--id", profile_id])
+
+    def list_builtin_profiles(self) -> dict[str, Any]:
+        return self._run("list-builtin-profiles")
+
+    def list_builtin_corpora(self) -> dict[str, Any]:
+        return self._run("list-builtin-corpora")
+
+    def search_local_corpus(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._run("search-local-corpus", payload=payload)
+
+    def describe_runtime(self) -> dict[str, Any]:
+        return self._run("describe-runtime")

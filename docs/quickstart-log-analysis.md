@@ -22,6 +22,44 @@ pnpm build
 
 - 已安装 `uv`
 
+## 第零步：先做运行时发现
+
+如果你是从外部 agent、MCP client 或 CI 集成这个项目，建议不要先假定命令、profile 和 contract 已知。
+
+先运行：
+
+```bash
+pnpm run run:core-cli -- describe-runtime
+pnpm run run:core-cli -- list-builtin-profiles
+pnpm run run:core-cli -- list-builtin-corpora
+```
+
+这一步可以拿到：
+
+- 当前 `core` runtime 名称和版本
+- 当前支持的命令和适配器
+- 当前可用的 contract 文件名
+- 当前内置 profile 清单
+- 当前内置 corpus 清单
+
+如果走 Python 包装层，对应命令是：
+
+```bash
+pnpm run run:python-mcp-cli -- invoke --tool describe_runtime
+pnpm run run:python-mcp-cli -- invoke --tool list_builtin_profiles
+pnpm run run:python-mcp-cli -- invoke --tool list_builtin_corpora
+```
+
+如果在进入正式日志分析前，想先用仓库内文档做一次确定性背景检索，可以再执行：
+
+```bash
+pnpm run run:core-cli -- search-local-corpus --input /path/to/search-input.json
+```
+
+输入结构见：
+
+- [corpus-search-input.schema.json](/mnt/c/github/MaaDiagnosticExpert/contracts/corpus-search-input.schema.json)
+
 ## 第一步：准备输入模板
 
 参考：

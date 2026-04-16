@@ -11,6 +11,11 @@ describe("contracts", () => {
       "core-result.schema.json",
       "error.schema.json",
       "profile.schema.json",
+      "profile-catalog.schema.json",
+      "runtime-info.schema.json",
+      "corpus-catalog.schema.json",
+      "corpus-search-input.schema.json",
+      "corpus-search-result.schema.json",
       "maa-log-analyzer-batch-input.schema.json",
       "maa-log-analyzer-runtime-input.schema.json"
     ]);

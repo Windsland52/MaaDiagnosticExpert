@@ -8,6 +8,11 @@ CONTRACT_FILENAMES = {
     "core_result": "core-result.schema.json",
     "core_error": "error.schema.json",
     "profile": "profile.schema.json",
+    "profile_catalog": "profile-catalog.schema.json",
+    "runtime_info": "runtime-info.schema.json",
+    "corpus_catalog": "corpus-catalog.schema.json",
+    "corpus_search_input": "corpus-search-input.schema.json",
+    "corpus_search_result": "corpus-search-result.schema.json",
     "maa_log_analyzer_batch_input": "maa-log-analyzer-batch-input.schema.json",
     "maa_log_analyzer_runtime_input": "maa-log-analyzer-runtime-input.schema.json",
 }

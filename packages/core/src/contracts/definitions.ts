@@ -8,8 +8,14 @@ import {
   MaaLogAnalyzerBatchInputSchema,
   MaaLogAnalyzerRuntimeInputSchema
 } from "../adapters/index.js";
+import {
+  CorpusCatalogSchema,
+  CorpusSearchInputSchema,
+  CorpusSearchResultSchema
+} from "../models/corpus.js";
 import { CoreErrorSchema } from "../models/core-error.js";
 import { CoreResultSchema } from "../models/core-result.js";
+import { ProfileCatalogSchema, RuntimeInfoSchema } from "../models/runtime-info.js";
 import { ProfileSchema } from "../profiles/schema.js";
 
 type ContractDefinition = {
@@ -41,6 +47,36 @@ export const ContractDefinitions: ContractDefinition[] = [
     title: "Profile",
     description: "Analysis profile contract consumed by @maa-diagnostic-expert/core.",
     schema: ProfileSchema
+  },
+  {
+    filename: "profile-catalog.schema.json",
+    title: "ProfileCatalog",
+    description: "Builtin profile catalog exposed by @maa-diagnostic-expert/core runtime.",
+    schema: ProfileCatalogSchema
+  },
+  {
+    filename: "runtime-info.schema.json",
+    title: "RuntimeInfo",
+    description: "Runtime discovery contract exposed by @maa-diagnostic-expert/core.",
+    schema: RuntimeInfoSchema
+  },
+  {
+    filename: "corpus-catalog.schema.json",
+    title: "CorpusCatalog",
+    description: "Builtin local corpus catalog exposed by @maa-diagnostic-expert/core runtime.",
+    schema: CorpusCatalogSchema
+  },
+  {
+    filename: "corpus-search-input.schema.json",
+    title: "CorpusSearchInput",
+    description: "Input contract for deterministic local corpus search.",
+    schema: CorpusSearchInputSchema
+  },
+  {
+    filename: "corpus-search-result.schema.json",
+    title: "CorpusSearchResult",
+    description: "Output contract for deterministic local corpus search.",
+    schema: CorpusSearchResultSchema
   },
   {
     filename: "maa-log-analyzer-batch-input.schema.json",

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "const": "retrieval-query/v1"
+    },
+    "query": {
+      "type": "string",
+      "minLength": 1
+    },
+    "corpusIds": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "limit": {
+      "default": 5,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20
+    }
+  },
+  "required": [
+    "apiVersion",
+    "query",
+    "corpusIds",
+    "limit"
+  ],
+  "additionalProperties": false,
+  "$id": "https://maa-diagnostic-expert/contracts/corpus-search-input.schema.json",
+  "title": "CorpusSearchInput",
+  "description": "Input contract for deterministic local corpus search."
+}

@@ -11,6 +11,9 @@ import {
 } from "./adapters/index.js";
 import { toCoreError } from "./errors.js";
 import { createEmptyCoreResult, parseCoreResult } from "./factories.js";
+import { buildProfileCatalog, buildRuntimeInfo } from "./runtime-info.js";
+import { CorpusSearchInputSchema } from "./models/corpus.js";
+import { buildCorpusCatalog, searchLocalCorpora } from "./retrieval/local.js";
 import { buildCoreResultFromAdapterOutput } from "./results.js";
 import { renderCoreErrorJson } from "./renderers/error.js";
 import { renderCoreResultJson } from "./renderers/json.js";
@@ -24,7 +27,8 @@ type ParsedArgs = {
 };
 
 function parseArgs(argv: string[]): ParsedArgs {
-  const [command = "help", ...rest] = argv;
+  const normalizedArgv = argv[0] === "--" ? argv.slice(1) : argv;
+  const [command = "help", ...rest] = normalizedArgv;
   const options: Record<string, string | boolean> = {};
 
   for (let index = 0; index < rest.length; index += 1) {
@@ -93,7 +97,11 @@ function printHelp(): string {
     "  normalize-mla-result [--input <path>] [--with-report] [--output <path>]",
     "  run-mla-runtime [--input <path>] [--with-report] [--output <path>]",
     "  validate-profile --input <path> [--output <path>]",
-    "  show-builtin-profile --id <id> [--output <path>]"
+    "  show-builtin-profile --id <id> [--output <path>]",
+    "  list-builtin-profiles [--output <path>]",
+    "  list-builtin-corpora [--output <path>]",
+    "  search-local-corpus [--input <path>] [--output <path>]",
+    "  describe-runtime [--output <path>]"
   ].join("\n");
 }
 
@@ -184,6 +192,29 @@ async function main(): Promise<void> {
       const profileId = requireStringOption(options, "id");
       const profile = requireProfile(profileId);
       await writeOutput(JSON.stringify(profile, null, 2), outputPath);
+      return;
+    }
+
+    case "list-builtin-profiles": {
+      await writeOutput(JSON.stringify(buildProfileCatalog(), null, 2), outputPath);
+      return;
+    }
+
+    case "list-builtin-corpora": {
+      await writeOutput(JSON.stringify(buildCorpusCatalog(), null, 2), outputPath);
+      return;
+    }
+
+    case "search-local-corpus": {
+      const inputPath = typeof options.input === "string" ? options.input : undefined;
+      const payload = CorpusSearchInputSchema.parse(await readJsonInput(inputPath));
+      const result = await searchLocalCorpora(payload);
+      await writeOutput(JSON.stringify(result, null, 2), outputPath);
+      return;
+    }
+
+    case "describe-runtime": {
+      await writeOutput(JSON.stringify(buildRuntimeInfo(), null, 2), outputPath);
       return;
     }
 

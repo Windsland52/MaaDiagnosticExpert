@@ -31,6 +31,19 @@
 - `tests/test_runtime.py`
   - 覆盖基础运行链路
 
+当前额外暴露的发现型工具：
+
+- `describe_runtime`
+  - 返回本地 `core` runtime 的名称、版本、命令、适配器、contract
+- `list_builtin_profiles`
+  - 返回本地 `core` 暴露的内置 profile 清单
+- `list_builtin_corpora`
+  - 返回本地 `core` 暴露的内置 corpus 清单
+- `search_local_corpus`
+  - 返回确定性的本地文档检索命中结果
+
+建议外部系统接入时先调这些发现型 tool，再决定后续如何调用执行型 tool。
+
 当前约束：
 
 - 依赖本机可用的 `node`

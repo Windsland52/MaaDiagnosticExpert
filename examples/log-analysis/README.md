@@ -26,6 +26,22 @@
 - `folder`
 - `zip`
 
+## 0. 先确认本地 runtime 能力
+
+如果这条链路是被外部 agent 或 CI 调用，建议先做一次发现：
+
+```bash
+pnpm run run:core-cli -- describe-runtime
+pnpm run run:core-cli -- list-builtin-profiles
+```
+
+这样可以先确认：
+
+- 当前本地 `core` 是否已构建
+- 当前支持哪些命令
+- 当前有哪些内置 profile
+- 当前有哪些 contract 可用来做结果校验
+
 ## 2. 运行 core CLI
 
 先构建：

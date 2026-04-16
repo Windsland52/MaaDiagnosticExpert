@@ -17,9 +17,9 @@ const genericMaaLogProfileInput = {
     "filesystem"
   ],
   recommendedCorpora: [
-    "maafw-docs",
-    "app-docs",
-    "diagnostic-guides"
+    "diagnostic-guides",
+    "repo-docs",
+    "repo-examples"
   ],
   recommendedQueries: [
     "next on_error timeout",

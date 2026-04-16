@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "const": "profile-catalog/v1"
+    },
+    "profiles": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "default": "profile/v1",
+            "type": "string",
+            "const": "profile/v1"
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "inputs": {
+            "default": {
+              "acceptsRawToolResults": true,
+              "acceptsSourcePaths": true,
+              "acceptsArchives": true,
+              "acceptsProfiles": true
+            },
+            "type": "object",
+            "properties": {
+              "acceptsRawToolResults": {
+                "type": "boolean"
+              },
+              "acceptsSourcePaths": {
+                "type": "boolean"
+              },
+              "acceptsArchives": {
+                "type": "boolean"
+              },
+              "acceptsProfiles": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "acceptsRawToolResults",
+              "acceptsSourcePaths",
+              "acceptsArchives",
+              "acceptsProfiles"
+            ],
+            "additionalProperties": false
+          },
+          "recommendedTools": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "recommendedCorpora": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "recommendedQueries": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "reportSections": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "tags": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "notes": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "apiVersion",
+          "id",
+          "name",
+          "inputs",
+          "recommendedTools",
+          "recommendedCorpora",
+          "recommendedQueries",
+          "reportSections",
+          "tags",
+          "notes"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "apiVersion",
+    "profiles"
+  ],
+  "additionalProperties": false,
+  "$id": "https://maa-diagnostic-expert/contracts/profile-catalog.schema.json",
+  "title": "ProfileCatalog",
+  "description": "Builtin profile catalog exposed by @maa-diagnostic-expert/core runtime."
+}
