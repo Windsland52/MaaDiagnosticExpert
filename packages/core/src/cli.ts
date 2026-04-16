@@ -4,10 +4,14 @@ import { writeFile } from "node:fs/promises";
 import { z } from "zod";
 
 import {
+  FilesystemBatchInputSchema,
+  FilesystemRuntimeInputSchema,
   MaaLogAnalyzerBatchInputSchema,
   MaaLogAnalyzerRuntimeInputSchema,
   MaaSupportExtensionBatchInputSchema,
   MaaSupportExtensionRuntimeInputSchema,
+  normalizeFilesystemResults,
+  normalizeFilesystemRuntimeInput,
   normalizeMaaLogAnalyzerResults,
   normalizeMaaLogAnalyzerRuntimeInput,
   normalizeMaaSupportExtensionResults,
@@ -107,6 +111,8 @@ function printHelp(): string {
     "  empty-result [--profile <id>] [--output <path>]",
     "  validate-core-result [--input <path>] [--output <path>]",
     "  render-report [--input <path>] [--format markdown|json] [--output <path>]",
+    "  normalize-filesystem-result [--input <path>] [--with-report] [--output <path>]",
+    "  run-filesystem-runtime [--input <path>] [--with-report] [--output <path>]",
     "  normalize-mla-result [--input <path>] [--with-report] [--output <path>]",
     "  run-mla-runtime [--input <path>] [--with-report] [--output <path>]",
     "  normalize-mse-result [--input <path>] [--with-report] [--output <path>]",
@@ -174,6 +180,34 @@ async function main(): Promise<void> {
       const inputPath = typeof options.input === "string" ? options.input : undefined;
       const payload = MaaLogAnalyzerBatchInputSchema.parse(await readJsonInput(inputPath));
       const output = normalizeMaaLogAnalyzerResults(payload);
+      const result = buildCoreResultFromAdapterOutput(output, payload.profileId ?? null);
+
+      if (isEnabledOption(options, "with-report")) {
+        result.report = buildMarkdownReport(result);
+      }
+
+      await writeOutput(renderCoreResultJson(result), outputPath);
+      return;
+    }
+
+    case "normalize-filesystem-result": {
+      const inputPath = typeof options.input === "string" ? options.input : undefined;
+      const payload = FilesystemBatchInputSchema.parse(await readJsonInput(inputPath));
+      const output = normalizeFilesystemResults(payload);
+      const result = buildCoreResultFromAdapterOutput(output, payload.profileId ?? null);
+
+      if (isEnabledOption(options, "with-report")) {
+        result.report = buildMarkdownReport(result);
+      }
+
+      await writeOutput(renderCoreResultJson(result), outputPath);
+      return;
+    }
+
+    case "run-filesystem-runtime": {
+      const inputPath = typeof options.input === "string" ? options.input : undefined;
+      const payload = FilesystemRuntimeInputSchema.parse(await readJsonInput(inputPath));
+      const output = await normalizeFilesystemRuntimeInput(payload);
       const result = buildCoreResultFromAdapterOutput(output, payload.profileId ?? null);
 
       if (isEnabledOption(options, "with-report")) {

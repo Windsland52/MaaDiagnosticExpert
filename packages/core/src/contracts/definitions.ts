@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 import { toJSONSchema, z } from "zod";
 
 import {
+  FilesystemBatchInputSchema,
+  FilesystemRuntimeInputSchema,
   MaaLogAnalyzerBatchInputSchema,
   MaaLogAnalyzerRuntimeInputSchema,
   MaaSupportExtensionBatchInputSchema,
@@ -94,6 +96,18 @@ export const ContractDefinitions: ContractDefinition[] = [
     title: "CorpusPrepareResult",
     description: "Output contract for preparing builtin local corpora.",
     schema: CorpusPrepareResultSchema
+  },
+  {
+    filename: "filesystem-batch-input.schema.json",
+    title: "FilesystemBatchInput",
+    description: "Adapter input contract for normalizing deterministic filesystem scan results.",
+    schema: FilesystemBatchInputSchema
+  },
+  {
+    filename: "filesystem-runtime-input.schema.json",
+    title: "FilesystemRuntimeInput",
+    description: "Adapter input contract for running deterministic filesystem scans from the local core runtime.",
+    schema: FilesystemRuntimeInputSchema
   },
   {
     filename: "maa-log-analyzer-batch-input.schema.json",

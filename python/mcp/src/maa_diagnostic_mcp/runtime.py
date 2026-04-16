@@ -102,6 +102,18 @@ class CoreCliRuntime:
         args = ["--with-report"] if with_report else []
         return self._run("normalize-mla-result", payload=payload, args=args)
 
+    def normalize_filesystem_result(
+        self, payload: dict[str, Any], *, with_report: bool = False
+    ) -> dict[str, Any]:
+        args = ["--with-report"] if with_report else []
+        return self._run("normalize-filesystem-result", payload=payload, args=args)
+
+    def run_filesystem_runtime(
+        self, payload: dict[str, Any], *, with_report: bool = False
+    ) -> dict[str, Any]:
+        args = ["--with-report"] if with_report else []
+        return self._run("run-filesystem-runtime", payload=payload, args=args)
+
     def run_mla_runtime(
         self, payload: dict[str, Any], *, with_report: bool = False
     ) -> dict[str, Any]:

@@ -1,4 +1,30 @@
 export {
+  FilesystemBatchInputSchema,
+  FilesystemEnvelopeSchema,
+  FilesystemFileCategorySchema,
+  FilesystemFileSummarySchema,
+  FilesystemMethodSchema,
+  FilesystemSnapshotSchema,
+  filesystemAdapter,
+  filesystemResultAdapter,
+  normalizeFilesystemResults,
+  type FilesystemBatchInput,
+  type FilesystemEnvelope,
+  type FilesystemFileCategory,
+  type FilesystemFileSummary,
+  type FilesystemMethod,
+  type FilesystemSnapshot,
+  type FilesystemToolResult
+} from "./filesystem.js";
+
+export {
+  FilesystemRuntimeInputSchema,
+  filesystemRuntimeAdapter,
+  normalizeFilesystemRuntimeInput,
+  type FilesystemRuntimeInput
+} from "./filesystem-runtime.js";
+
+export {
   MaaLogAnalyzerBatchInputSchema,
   MaaLogAnalyzerEnvelopeSchema,
   MaaLogAnalyzerMethodSchema,

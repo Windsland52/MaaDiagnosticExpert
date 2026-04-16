@@ -54,9 +54,11 @@ export {
 
 export {
   DiagnosticPipelineInputSchema,
+  DiagnosticFilesystemSourceSchema,
   DiagnosticMlaSourceSchema,
   DiagnosticMseSourceSchema,
   DiagnosticRetrievalConfigSchema,
+  type DiagnosticFilesystemSource,
   type DiagnosticMlaSource,
   type DiagnosticMseSource,
   type DiagnosticPipelineInput,

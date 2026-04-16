@@ -13,6 +13,8 @@ async function createMaaProjectFixture(): Promise<string> {
   tempDirs.push(projectRoot);
 
   await mkdir(path.join(projectRoot, "assets", "resource", "pipeline"), { recursive: true });
+  await mkdir(path.join(projectRoot, "config"), { recursive: true });
+  await mkdir(path.join(projectRoot, "on_error"), { recursive: true });
   await mkdir(path.join(projectRoot, "tasks"), { recursive: true });
 
   await writeFile(
@@ -74,6 +76,23 @@ async function createMaaProjectFixture(): Promise<string> {
     ),
     "utf8"
   );
+
+  await writeFile(
+    path.join(projectRoot, "config", "maa_option.json"),
+    JSON.stringify(
+      {
+        save_on_error: true,
+        task: {
+          DailyRewards: true
+        }
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+
+  await writeFile(path.join(projectRoot, "on_error", "scene.png"), "fake-image", "utf8");
 
   return projectRoot;
 }
@@ -172,6 +191,17 @@ describe("diagnostic pipeline", () => {
             ]
           }
         },
+        filesystem: {
+          mode: "runtime",
+          input: {
+            roots: [projectRoot],
+            includeGlobs: ["config/**/*", "on_error/**/*"],
+            excludeGlobs: [],
+            maxFiles: 20,
+            parseConfigFiles: true,
+            includeImages: true
+          }
+        },
         mse: {
           mode: "runtime",
           input: {
@@ -201,10 +231,13 @@ describe("diagnostic pipeline", () => {
 
     expect(result.profileId).toBe("generic-maa-log");
     expect(result.rawToolResults["maa-log-analyzer"]).toBeDefined();
+    expect(result.rawToolResults["filesystem"]).toBeDefined();
     expect(result.rawToolResults["maa-support-extension"]).toBeDefined();
     expect(result.rawToolResults["diagnostic-pipeline"]).toBeDefined();
     expect(result.diagnosticMeta.findings.some((item) => item.kind === "task_definition_resolved")).toBe(true);
     expect(result.diagnosticMeta.findings.some((item) => item.kind === "entry_node_resolved")).toBe(true);
+    expect(result.diagnosticMeta.findings.some((item) => item.kind === "config_snapshot_available")).toBe(true);
+    expect(result.diagnosticMeta.findings.some((item) => item.kind === "error_screenshot_available")).toBe(true);
     expect(result.diagnosticMeta.retrievalHits.length).toBeGreaterThan(0);
     expect(result.diagnosticMeta.profileHints.some((item) => item.kind === "recommended_tool")).toBe(true);
     expect(result.report?.format).toBe("markdown");

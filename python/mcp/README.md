@@ -48,6 +48,13 @@
 
 当前内置 corpus 已包含 `maafw-docs`，对应仓库内的 `sample/MaaFramework/docs`。
 
+当前执行型工具还包括：
+
+- `run_filesystem_runtime`
+  - 扫描本地目录中的 `config/*`、`on_error/*`、日志等文件证据
+- `normalize_filesystem_result`
+  - 把外部系统已经采集好的文件扫描结果归一化成 `CoreResult`
+
 建议外部系统接入时先调这些发现型 tool，再决定后续如何调用执行型 tool。
 
 当前约束：

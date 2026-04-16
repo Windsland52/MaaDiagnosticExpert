@@ -11,6 +11,8 @@ const CORE_CLI_COMMANDS = [
   "empty-result",
   "validate-core-result",
   "render-report",
+  "normalize-filesystem-result",
+  "run-filesystem-runtime",
   "normalize-mla-result",
   "run-mla-runtime",
   "normalize-mse-result",
@@ -26,6 +28,8 @@ const CORE_CLI_COMMANDS = [
 ] as const;
 
 const CORE_ADAPTERS = [
+  "filesystem",
+  "filesystem-runtime",
   "maa-log-analyzer",
   "maa-log-analyzer-runtime",
   "maa-support-extension",

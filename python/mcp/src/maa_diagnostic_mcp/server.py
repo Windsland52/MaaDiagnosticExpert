@@ -203,6 +203,8 @@ class McpServer:
             elif name == "render_report":
                 payload = arguments.get("result")
             elif name in {
+                "normalize_filesystem_result",
+                "run_filesystem_runtime",
                 "normalize_mla_result",
                 "run_mla_runtime",
                 "normalize_mse_result",

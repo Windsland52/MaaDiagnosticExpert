@@ -205,22 +205,32 @@
 - `empty-result`
 - `validate-core-result`
 - `render-report`
+- `normalize-filesystem-result`
+- `run-filesystem-runtime`
 - `normalize-mla-result`
 - `run-mla-runtime`
+- `normalize-mse-result`
+- `run-mse-runtime`
 - `validate-profile`
 - `show-builtin-profile`
 - `list-builtin-profiles`
 - `list-builtin-corpora`
+- `prepare-builtin-corpora`
 - `search-local-corpus`
+- `run-diagnostic-pipeline`
 - `describe-runtime`
 
 同时 CLI 还支持全局参数 `--json-error`，用于在失败时输出 `CoreError` JSON。
 
 这意味着后续 `python/mcp` 已经可以围绕 `core` CLI 设计调用链，而不需要等完整业务逻辑全部完成。
 
-## 6. 第一个真实适配器
+## 6. 当前真实适配器
 
-当前 `core` 已经补上第一个真实适配器体系：`maa-log-analyzer`。
+当前 `core` 已经补上三类真实适配器：
+
+- `filesystem`
+- `maa-log-analyzer`
+- `maa-support-extension`
 
 目前分成两层：
 

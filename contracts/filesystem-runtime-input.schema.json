@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "profileId": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "roots": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "includeGlobs": {
+      "default": [
+        "**/*"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "excludeGlobs": {
+      "default": [
+        "**/.git/**",
+        "**/node_modules/**",
+        "**/.venv/**",
+        "**/dist/**",
+        "**/build/**",
+        "**/.pnpm-store/**"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "maxFiles": {
+      "default": 200,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2000
+    },
+    "parseConfigFiles": {
+      "default": true,
+      "type": "boolean"
+    },
+    "includeImages": {
+      "default": true,
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "roots",
+    "includeGlobs",
+    "excludeGlobs",
+    "maxFiles",
+    "parseConfigFiles",
+    "includeImages"
+  ],
+  "additionalProperties": false,
+  "$id": "https://maa-diagnostic-expert/contracts/filesystem-runtime-input.schema.json",
+  "title": "FilesystemRuntimeInput",
+  "description": "Adapter input contract for running deterministic filesystem scans from the local core runtime."
+}

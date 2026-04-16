@@ -117,6 +117,8 @@ contracts/        # 跨语言共享的 JSON schema / profile schema
 - `corpus-catalog.schema.json`
 - `corpus-prepare-input.schema.json`
 - `corpus-prepare-result.schema.json`
+- `filesystem-batch-input.schema.json`
+- `filesystem-runtime-input.schema.json`
 - `corpus-search-input.schema.json`
 - `corpus-search-result.schema.json`
 - `maa-log-analyzer-batch-input.schema.json`
@@ -226,6 +228,7 @@ pnpm run run:core-cli -- run-diagnostic-pipeline --input /path/to/diagnostic-pip
 
 这个命令会把：
 
+- `filesystem`
 - `maa-log-analyzer`
 - `maa-support-extension`
 - 本地 corpus retrieval

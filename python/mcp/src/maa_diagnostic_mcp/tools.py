@@ -55,6 +55,8 @@ CORPUS_PREPARE_RESULT_CONTRACT = load_contract("corpus_prepare_result")
 CORPUS_SEARCH_INPUT_CONTRACT = load_contract("corpus_search_input")
 CORPUS_SEARCH_RESULT_CONTRACT = load_contract("corpus_search_result")
 DIAGNOSTIC_PIPELINE_INPUT_CONTRACT = load_contract("diagnostic_pipeline_input")
+FILESYSTEM_BATCH_INPUT_CONTRACT = load_contract("filesystem_batch_input")
+FILESYSTEM_RUNTIME_INPUT_CONTRACT = load_contract("filesystem_runtime_input")
 MLA_BATCH_INPUT_CONTRACT = load_contract("maa_log_analyzer_batch_input")
 MLA_RUNTIME_INPUT_CONTRACT = load_contract("maa_log_analyzer_runtime_input")
 MSE_BATCH_INPUT_CONTRACT = load_contract("maa_support_extension_batch_input")
@@ -88,6 +90,28 @@ RENDER_REPORT_INPUT_SCHEMA = _object_schema(
 NORMALIZE_MLA_RESULT_INPUT_SCHEMA = _object_schema(
     {
         "input": MLA_BATCH_INPUT_CONTRACT,
+        "with_report": {
+            "type": "boolean",
+            "default": False,
+        },
+    },
+    required=["input"],
+)
+
+NORMALIZE_FILESYSTEM_RESULT_INPUT_SCHEMA = _object_schema(
+    {
+        "input": FILESYSTEM_BATCH_INPUT_CONTRACT,
+        "with_report": {
+            "type": "boolean",
+            "default": False,
+        },
+    },
+    required=["input"],
+)
+
+RUN_FILESYSTEM_RUNTIME_INPUT_SCHEMA = _object_schema(
+    {
+        "input": FILESYSTEM_RUNTIME_INPUT_CONTRACT,
         "with_report": {
             "type": "boolean",
             "default": False,
@@ -210,6 +234,20 @@ DEFAULT_TOOL_SPECS = [
         output_contract=None,
     ),
     ToolSpec(
+        name="normalize_filesystem_result",
+        description="Normalize deterministic filesystem scan results into CoreResult.",
+        input_schema=NORMALIZE_FILESYSTEM_RESULT_INPUT_SCHEMA,
+        input_contract="filesystem_batch_input",
+        output_contract="core_result",
+    ),
+    ToolSpec(
+        name="run_filesystem_runtime",
+        description="Run the local filesystem evidence adapter and return CoreResult.",
+        input_schema=RUN_FILESYSTEM_RUNTIME_INPUT_SCHEMA,
+        input_contract="filesystem_runtime_input",
+        output_contract="core_result",
+    ),
+    ToolSpec(
         name="normalize_mla_result",
         description="Normalize existing Maa Log Analyzer tool results into CoreResult.",
         input_schema=NORMALIZE_MLA_RESULT_INPUT_SCHEMA,
@@ -321,6 +359,16 @@ class CoreToolset:
     ) -> dict[str, Any]:
         return self.runtime.normalize_mla_result(payload, with_report=with_report)
 
+    def normalize_filesystem_result(
+        self, payload: dict[str, Any], *, with_report: bool = False
+    ) -> dict[str, Any]:
+        return self.runtime.normalize_filesystem_result(payload, with_report=with_report)
+
+    def run_filesystem_runtime(
+        self, payload: dict[str, Any], *, with_report: bool = False
+    ) -> dict[str, Any]:
+        return self.runtime.run_filesystem_runtime(payload, with_report=with_report)
+
     def run_mla_runtime(
         self, payload: dict[str, Any], *, with_report: bool = False
     ) -> dict[str, Any]:
@@ -382,6 +430,16 @@ class CoreToolset:
             if payload is None:
                 raise ValueError("payload is required for render_report")
             return self.render_report(payload, format=format)
+
+        if tool_name == "normalize_filesystem_result":
+            if payload is None:
+                raise ValueError("payload is required for normalize_filesystem_result")
+            return self.normalize_filesystem_result(payload, with_report=with_report)
+
+        if tool_name == "run_filesystem_runtime":
+            if payload is None:
+                raise ValueError("payload is required for run_filesystem_runtime")
+            return self.run_filesystem_runtime(payload, with_report=with_report)
 
         if tool_name == "normalize_mla_result":
             if payload is None:

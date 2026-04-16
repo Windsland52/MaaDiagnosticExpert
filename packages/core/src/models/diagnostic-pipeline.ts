@@ -1,6 +1,12 @@
 import { z } from "zod";
 
 import {
+  FilesystemBatchInputSchema
+} from "../adapters/filesystem.js";
+import {
+  FilesystemRuntimeInputSchema
+} from "../adapters/filesystem-runtime.js";
+import {
   MaaLogAnalyzerBatchInputSchema,
 } from "../adapters/maa-log-analyzer.js";
 import {
@@ -23,6 +29,17 @@ export const DiagnosticMlaSourceSchema = z.discriminatedUnion("mode", [
   z.object({
     mode: z.literal("result"),
     input: MaaLogAnalyzerBatchInputSchema
+  })
+]);
+
+export const DiagnosticFilesystemSourceSchema = z.discriminatedUnion("mode", [
+  z.object({
+    mode: z.literal("runtime"),
+    input: FilesystemRuntimeInputSchema
+  }),
+  z.object({
+    mode: z.literal("result"),
+    input: FilesystemBatchInputSchema
   })
 ]);
 
@@ -49,6 +66,7 @@ export const DiagnosticPipelineInputSchema = z.object({
   apiVersion: z.literal("diagnostic-pipeline/v1"),
   profileId: z.string().min(1).nullable().optional(),
   mla: DiagnosticMlaSourceSchema.optional(),
+  filesystem: DiagnosticFilesystemSourceSchema.optional(),
   mse: DiagnosticMseSourceSchema.optional(),
   retrieval: DiagnosticRetrievalConfigSchema.default(() => ({
     enabled: true,
@@ -57,13 +75,14 @@ export const DiagnosticPipelineInputSchema = z.object({
     limitPerQuery: 5,
     maxHits: 10
   }))
-}).refine((input) => Boolean(input.mla || input.mse), {
+}).refine((input) => Boolean(input.mla || input.filesystem || input.mse), {
   message: "At least one diagnostic source is required.",
   path: ["mla"]
 });
 
 export type DiagnosticSourceMode = z.infer<typeof DiagnosticSourceModeSchema>;
 export type DiagnosticMlaSource = z.infer<typeof DiagnosticMlaSourceSchema>;
+export type DiagnosticFilesystemSource = z.infer<typeof DiagnosticFilesystemSourceSchema>;
 export type DiagnosticMseSource = z.infer<typeof DiagnosticMseSourceSchema>;
 export type DiagnosticRetrievalConfig = z.infer<typeof DiagnosticRetrievalConfigSchema>;
 export type DiagnosticPipelineInput = z.infer<typeof DiagnosticPipelineInputSchema>;

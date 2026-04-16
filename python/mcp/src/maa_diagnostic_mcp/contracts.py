@@ -16,6 +16,8 @@ CONTRACT_FILENAMES = {
     "corpus_search_input": "corpus-search-input.schema.json",
     "corpus_search_result": "corpus-search-result.schema.json",
     "diagnostic_pipeline_input": "diagnostic-pipeline-input.schema.json",
+    "filesystem_batch_input": "filesystem-batch-input.schema.json",
+    "filesystem_runtime_input": "filesystem-runtime-input.schema.json",
     "maa_log_analyzer_batch_input": "maa-log-analyzer-batch-input.schema.json",
     "maa_log_analyzer_runtime_input": "maa-log-analyzer-runtime-input.schema.json",
     "maa_support_extension_batch_input": "maa-support-extension-batch-input.schema.json",

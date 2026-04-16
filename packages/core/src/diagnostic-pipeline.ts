@@ -1,5 +1,7 @@
 import type { AdapterRunOutput } from "./adapters/types.js";
 import {
+  normalizeFilesystemResults,
+  normalizeFilesystemRuntimeInput,
   normalizeMaaLogAnalyzerResults,
   normalizeMaaLogAnalyzerRuntimeInput,
   normalizeMaaSupportExtensionResults,
@@ -221,8 +223,23 @@ function enrichMseRuntimeInput(
 function resolveEffectiveProfileId(input: DiagnosticPipelineInput): string | null {
   return input.profileId
     ?? input.mla?.input.profileId
+    ?? input.filesystem?.input.profileId
     ?? input.mse?.input.profileId
     ?? null;
+}
+
+async function runFilesystemSource(
+  input: DiagnosticPipelineInput["filesystem"]
+): Promise<AdapterRunOutput | null> {
+  if (!input) {
+    return null;
+  }
+
+  if (input.mode === "runtime") {
+    return normalizeFilesystemRuntimeInput(input.input);
+  }
+
+  return normalizeFilesystemResults(input.input);
 }
 
 async function runMlaSource(input: DiagnosticPipelineInput["mla"]): Promise<AdapterRunOutput | null> {
@@ -300,6 +317,21 @@ function buildDerivedQueries(result: CoreResult, profileId: string | null, input
 
   if (result.diagnosticMeta.findings.some((item) => item.kind === "maa_project_definition_errors")) {
     queries.add("interface.json import task option pipeline");
+  }
+
+  for (const observation of findObservationByKind(result, "config_flag")) {
+    if (!isRecord(observation.payload)) {
+      continue;
+    }
+
+    const flagName = readString(observation.payload.flag);
+    const flagValue = observation.payload.value;
+    if (!flagName || typeof flagValue !== "boolean") {
+      continue;
+    }
+
+    queries.add(`${flagName} ${flagValue}`);
+    queries.add(`${flagName} on_error`);
   }
 
   return [...queries].filter((item) => item.trim().length > 0);
@@ -446,6 +478,11 @@ export async function runDiagnosticPipeline(
   const normalized = DiagnosticPipelineInputSchema.parse(input);
   const effectiveProfileId = resolveEffectiveProfileId(normalized);
   const outputs: AdapterRunOutput[] = [];
+  const filesystemOutput = await runFilesystemSource(normalized.filesystem);
+  if (filesystemOutput) {
+    outputs.push(filesystemOutput);
+  }
+
   const mlaOutput = await runMlaSource(normalized.mla);
   if (mlaOutput) {
     outputs.push(mlaOutput);
@@ -490,6 +527,7 @@ export async function runDiagnosticPipeline(
     },
     sources: {
       mla: normalized.mla?.mode ?? null,
+      filesystem: normalized.filesystem?.mode ?? null,
       mse: normalized.mse?.mode ?? null
     }
   };

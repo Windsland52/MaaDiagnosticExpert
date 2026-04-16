@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
+import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
@@ -81,6 +82,39 @@ class CoreCliRuntimeTests(unittest.TestCase):
         self.assertEqual(result["prepared"][0]["corpusId"], "diagnostic-guides")
         self.assertTrue(result["prepared"][0]["cachePath"].endswith("diagnostic-guides.json"))
 
+    def test_run_filesystem_runtime(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="maa-diagnostic-mcp-fs-") as temp_dir:
+            config_dir = Path(temp_dir) / "config"
+            on_error_dir = Path(temp_dir) / "on_error"
+            config_dir.mkdir(parents=True, exist_ok=True)
+            on_error_dir.mkdir(parents=True, exist_ok=True)
+            (config_dir / "maa_option.json").write_text(
+                '{"save_on_error": true}',
+                encoding="utf-8",
+            )
+            (on_error_dir / "scene.png").write_text("fake-image", encoding="utf-8")
+
+            result = self.runtime.run_filesystem_runtime(
+                {
+                    "profileId": "generic-maa-log",
+                    "roots": [temp_dir],
+                    "includeGlobs": ["config/**/*", "on_error/**/*"],
+                    "excludeGlobs": [],
+                    "maxFiles": 20,
+                    "parseConfigFiles": True,
+                    "includeImages": True,
+                }
+            )
+
+        self.assertEqual(result["apiVersion"], "core/v1")
+        self.assertIn("filesystem", result["rawToolResults"])
+        self.assertTrue(
+            any(
+                item["kind"] == "config_snapshot_available"
+                for item in result["diagnosticMeta"]["findings"]
+            )
+        )
+
     def test_run_diagnostic_pipeline(self) -> None:
         result = self.runtime.run_diagnostic_pipeline(
             {
@@ -140,6 +174,7 @@ class CoreCliRuntimeTests(unittest.TestCase):
         self.assertEqual(runtime_info["apiVersion"], "runtime/v1")
         self.assertIn("describe-runtime", runtime_info["commands"])
         self.assertIn("prepare-builtin-corpora", runtime_info["commands"])
+        self.assertIn("run-filesystem-runtime", runtime_info["commands"])
         self.assertIn("run-diagnostic-pipeline", runtime_info["commands"])
         self.assertIn("maafw-docs", runtime_info["builtinCorpusIds"])
         self.assertIn("diagnostic-guides", runtime_info["builtinCorpusIds"])
@@ -170,6 +205,7 @@ class ToolingTests(unittest.TestCase):
         specs = toolset.list_tool_specs()
         self.assertGreaterEqual(len(specs), 5)
         self.assertTrue(all(spec.error_contract == "core_error" for spec in specs))
+        self.assertTrue(any(spec.name == "run_filesystem_runtime" for spec in specs))
         self.assertTrue(any(spec.name == "prepare_builtin_corpora" for spec in specs))
         self.assertTrue(any(spec.name == "run_diagnostic_pipeline" for spec in specs))
 
@@ -288,6 +324,7 @@ class McpServerTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertGreaterEqual(len(result.tools), 5)
         self.assertTrue(any(tool.name == "empty_result" for tool in result.tools))
+        self.assertTrue(any(tool.name == "run_filesystem_runtime" for tool in result.tools))
         self.assertTrue(any(tool.name == "search_local_corpus" for tool in result.tools))
         self.assertTrue(any(tool.name == "prepare_builtin_corpora" for tool in result.tools))
         self.assertTrue(any(tool.name == "run_diagnostic_pipeline" for tool in result.tools))
@@ -329,6 +366,37 @@ class McpServerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.structuredContent["apiVersion"], "retrieval-result/v1")
         self.assertEqual(result.structuredContent["corpusIds"], ["maafw-docs"])
         self.assertGreaterEqual(len(result.structuredContent["hits"]), 1)
+
+    async def test_tools_call_run_filesystem_runtime(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="maa-diagnostic-mcp-fs-") as temp_dir:
+            config_dir = Path(temp_dir) / "config"
+            config_dir.mkdir(parents=True, exist_ok=True)
+            (config_dir / "maa_option.json").write_text(
+                '{"save_on_error": true}',
+                encoding="utf-8",
+            )
+
+            result = await asyncio.wait_for(
+                self._run_with_session(
+                    lambda session: session.call_tool(
+                        "run_filesystem_runtime",
+                        {
+                            "input": {
+                                "roots": [temp_dir],
+                                "includeGlobs": ["config/**/*"],
+                                "excludeGlobs": [],
+                                "maxFiles": 20,
+                                "parseConfigFiles": True,
+                                "includeImages": False,
+                            }
+                        },
+                    )
+                ),
+                timeout=10,
+            )
+
+        self.assertFalse(result.isError)
+        self.assertIn("filesystem", result.structuredContent["rawToolResults"])
 
     async def test_tools_call_run_diagnostic_pipeline(self) -> None:
         result = await asyncio.wait_for(

@@ -18,6 +18,8 @@ describe("contracts", () => {
       "corpus-search-result.schema.json",
       "corpus-prepare-input.schema.json",
       "corpus-prepare-result.schema.json",
+      "filesystem-batch-input.schema.json",
+      "filesystem-runtime-input.schema.json",
       "maa-log-analyzer-batch-input.schema.json",
       "maa-log-analyzer-runtime-input.schema.json",
       "maa-support-extension-batch-input.schema.json",

@@ -31,9 +31,13 @@ describe("runtime info", () => {
     expect(runtimeInfo.commands).toContain("list-builtin-corpora");
     expect(runtimeInfo.commands).toContain("prepare-builtin-corpora");
     expect(runtimeInfo.commands).toContain("search-local-corpus");
+    expect(runtimeInfo.commands).toContain("normalize-filesystem-result");
+    expect(runtimeInfo.commands).toContain("run-filesystem-runtime");
     expect(runtimeInfo.commands).toContain("normalize-mse-result");
     expect(runtimeInfo.commands).toContain("run-mse-runtime");
     expect(runtimeInfo.commands).toContain("run-diagnostic-pipeline");
+    expect(runtimeInfo.adapters).toContain("filesystem");
+    expect(runtimeInfo.adapters).toContain("filesystem-runtime");
     expect(runtimeInfo.adapters).toContain("maa-log-analyzer");
     expect(runtimeInfo.adapters).toContain("maa-support-extension");
     expect(runtimeInfo.adapters).toContain("maa-support-extension-runtime");
@@ -45,6 +49,7 @@ describe("runtime info", () => {
     expect(runtimeInfo.contracts.some((item) => item.filename === "corpus-catalog.schema.json")).toBe(true);
     expect(runtimeInfo.contracts.some((item) => item.filename === "corpus-search-result.schema.json")).toBe(true);
     expect(runtimeInfo.contracts.some((item) => item.filename === "corpus-prepare-result.schema.json")).toBe(true);
+    expect(runtimeInfo.contracts.some((item) => item.filename === "filesystem-runtime-input.schema.json")).toBe(true);
     expect(runtimeInfo.contracts.some((item) => item.filename === "maa-support-extension-runtime-input.schema.json")).toBe(true);
     expect(runtimeInfo.contracts.some((item) => item.filename === "diagnostic-pipeline-input.schema.json")).toBe(true);
   });

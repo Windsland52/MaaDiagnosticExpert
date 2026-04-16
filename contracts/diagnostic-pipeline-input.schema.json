@@ -384,6 +384,233 @@
         }
       ]
     },
+    "filesystem": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "const": "runtime"
+            },
+            "input": {
+              "type": "object",
+              "properties": {
+                "profileId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "roots": {
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "includeGlobs": {
+                  "default": [
+                    "**/*"
+                  ],
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "excludeGlobs": {
+                  "default": [
+                    "**/.git/**",
+                    "**/node_modules/**",
+                    "**/.venv/**",
+                    "**/dist/**",
+                    "**/build/**",
+                    "**/.pnpm-store/**"
+                  ],
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "maxFiles": {
+                  "default": 200,
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2000
+                },
+                "parseConfigFiles": {
+                  "default": true,
+                  "type": "boolean"
+                },
+                "includeImages": {
+                  "default": true,
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "roots",
+                "includeGlobs",
+                "excludeGlobs",
+                "maxFiles",
+                "parseConfigFiles",
+                "includeImages"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "mode",
+            "input"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "const": "result"
+            },
+            "input": {
+              "type": "object",
+              "properties": {
+                "profileId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "results": {
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "tool": {
+                        "type": "string",
+                        "enum": [
+                          "scan_snapshot"
+                        ]
+                      },
+                      "response": {
+                        "type": "object",
+                        "properties": {
+                          "request_id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "api_version": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "ok": {
+                            "type": "boolean"
+                          },
+                          "data": {
+                            "anyOf": [
+                              {},
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "meta": {
+                            "type": "object",
+                            "properties": {
+                              "duration_ms": {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              "warnings": {
+                                "default": [],
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            "required": [
+                              "duration_ms",
+                              "warnings"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "error": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "code": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "message": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "retryable": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "code",
+                                  "message",
+                                  "retryable"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "request_id",
+                          "api_version",
+                          "ok",
+                          "data",
+                          "meta",
+                          "error"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "tool",
+                      "response"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "results"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "mode",
+            "input"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
     "mse": {
       "oneOf": [
         {

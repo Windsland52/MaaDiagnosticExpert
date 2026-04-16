@@ -154,8 +154,17 @@ pnpm run run:core-cli -- run-diagnostic-pipeline \
   --with-report
 ```
 
+如果你只想先把 `config/*`、`on_error/*` 这类文件证据独立跑出来，也可以直接执行：
+
+```bash
+pnpm run run:core-cli -- run-filesystem-runtime \
+  --input /path/to/filesystem-runtime-input.json \
+  --with-report
+```
+
 对应输入结构见：
 
+- [filesystem-runtime-input.schema.json](/mnt/c/github/MaaDiagnosticExpert/contracts/filesystem-runtime-input.schema.json)
 - [diagnostic-pipeline-input.schema.json](/mnt/c/github/MaaDiagnosticExpert/contracts/diagnostic-pipeline-input.schema.json)
 
 如果要把它当成 stdio MCP server 给外部 agent 接：

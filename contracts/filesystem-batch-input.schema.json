@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "profileId": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "results": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tool": {
+            "type": "string",
+            "enum": [
+              "scan_snapshot"
+            ]
+          },
+          "response": {
+            "type": "object",
+            "properties": {
+              "request_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "api_version": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ok": {
+                "type": "boolean"
+              },
+              "data": {
+                "anyOf": [
+                  {},
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "meta": {
+                "type": "object",
+                "properties": {
+                  "duration_ms": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "warnings": {
+                    "default": [],
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "duration_ms",
+                  "warnings"
+                ],
+                "additionalProperties": false
+              },
+              "error": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "code": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "message": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "retryable": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "code",
+                      "message",
+                      "retryable"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "request_id",
+              "api_version",
+              "ok",
+              "data",
+              "meta",
+              "error"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "tool",
+          "response"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "results"
+  ],
+  "additionalProperties": false,
+  "$id": "https://maa-diagnostic-expert/contracts/filesystem-batch-input.schema.json",
+  "title": "FilesystemBatchInput",
+  "description": "Adapter input contract for normalizing deterministic filesystem scan results."
+}
