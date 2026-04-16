@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "const": "corpus-prepare-result/v1"
+    },
+    "prepared": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "corpusId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "cachePath": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fileCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "chunkCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "corpusId",
+          "cachePath",
+          "fileCount",
+          "chunkCount"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "apiVersion",
+    "prepared"
+  ],
+  "additionalProperties": false,
+  "$id": "https://maa-diagnostic-expert/contracts/corpus-prepare-result.schema.json",
+  "title": "CorpusPrepareResult",
+  "description": "Output contract for preparing builtin local corpora."
+}

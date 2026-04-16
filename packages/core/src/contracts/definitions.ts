@@ -6,15 +6,20 @@ import { toJSONSchema, z } from "zod";
 
 import {
   MaaLogAnalyzerBatchInputSchema,
-  MaaLogAnalyzerRuntimeInputSchema
+  MaaLogAnalyzerRuntimeInputSchema,
+  MaaSupportExtensionBatchInputSchema,
+  MaaSupportExtensionRuntimeInputSchema
 } from "../adapters/index.js";
 import {
   CorpusCatalogSchema,
+  CorpusPrepareInputSchema,
+  CorpusPrepareResultSchema,
   CorpusSearchInputSchema,
   CorpusSearchResultSchema
 } from "../models/corpus.js";
 import { CoreErrorSchema } from "../models/core-error.js";
 import { CoreResultSchema } from "../models/core-result.js";
+import { DiagnosticPipelineInputSchema } from "../models/diagnostic-pipeline.js";
 import { ProfileCatalogSchema, RuntimeInfoSchema } from "../models/runtime-info.js";
 import { ProfileSchema } from "../profiles/schema.js";
 
@@ -79,6 +84,18 @@ export const ContractDefinitions: ContractDefinition[] = [
     schema: CorpusSearchResultSchema
   },
   {
+    filename: "corpus-prepare-input.schema.json",
+    title: "CorpusPrepareInput",
+    description: "Input contract for preparing builtin local corpora.",
+    schema: CorpusPrepareInputSchema
+  },
+  {
+    filename: "corpus-prepare-result.schema.json",
+    title: "CorpusPrepareResult",
+    description: "Output contract for preparing builtin local corpora.",
+    schema: CorpusPrepareResultSchema
+  },
+  {
     filename: "maa-log-analyzer-batch-input.schema.json",
     title: "MaaLogAnalyzerBatchInput",
     description: "Adapter input contract for normalizing existing Maa Log Analyzer tool results.",
@@ -89,6 +106,24 @@ export const ContractDefinitions: ContractDefinition[] = [
     title: "MaaLogAnalyzerRuntimeInput",
     description: "Adapter input contract for running Maa Log Analyzer from the local core runtime.",
     schema: MaaLogAnalyzerRuntimeInputSchema
+  },
+  {
+    filename: "maa-support-extension-batch-input.schema.json",
+    title: "MaaSupportExtensionBatchInput",
+    description: "Adapter input contract for normalizing Maa Support Extension tool results.",
+    schema: MaaSupportExtensionBatchInputSchema
+  },
+  {
+    filename: "maa-support-extension-runtime-input.schema.json",
+    title: "MaaSupportExtensionRuntimeInput",
+    description: "Adapter input contract for running Maa Support Extension from the local core runtime.",
+    schema: MaaSupportExtensionRuntimeInputSchema
+  },
+  {
+    filename: "diagnostic-pipeline-input.schema.json",
+    title: "DiagnosticPipelineInput",
+    description: "Input contract for the cross-tool diagnostic pipeline.",
+    schema: DiagnosticPipelineInputSchema
   }
 ];
 

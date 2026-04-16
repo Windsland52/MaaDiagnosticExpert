@@ -16,8 +16,13 @@ describe("contracts", () => {
       "corpus-catalog.schema.json",
       "corpus-search-input.schema.json",
       "corpus-search-result.schema.json",
+      "corpus-prepare-input.schema.json",
+      "corpus-prepare-result.schema.json",
       "maa-log-analyzer-batch-input.schema.json",
-      "maa-log-analyzer-runtime-input.schema.json"
+      "maa-log-analyzer-runtime-input.schema.json",
+      "maa-support-extension-batch-input.schema.json",
+      "maa-support-extension-runtime-input.schema.json",
+      "diagnostic-pipeline-input.schema.json"
     ]);
 
     const coreResult = documents.find((item) => item.filename === "core-result.schema.json");

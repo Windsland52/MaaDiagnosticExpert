@@ -36,16 +36,33 @@ export {
 
 export {
   CorpusCatalogSchema,
+  CorpusPrepareInputSchema,
+  CorpusPrepareResultSchema,
   CorpusSearchInputSchema,
   CorpusSearchResultSchema,
   CorpusSearchStatsSchema,
   CorpusSummarySchema,
   type CorpusCatalog,
+  type CorpusPrepareInput,
+  type CorpusPrepareResult,
   type CorpusSearchInput,
   type CorpusSearchResult,
   type CorpusSearchStats,
+  type PreparedCorpusSummary,
   type CorpusSummary
 } from "./models/corpus.js";
+
+export {
+  DiagnosticPipelineInputSchema,
+  DiagnosticMlaSourceSchema,
+  DiagnosticMseSourceSchema,
+  DiagnosticRetrievalConfigSchema,
+  type DiagnosticMlaSource,
+  type DiagnosticMseSource,
+  type DiagnosticPipelineInput,
+  type DiagnosticRetrievalConfig,
+  type DiagnosticSourceMode
+} from "./models/diagnostic-pipeline.js";
 
 export {
   MissingEvidenceSchema,
@@ -115,9 +132,12 @@ export {
   BuiltinCorpusDefinitions,
   buildCorpusCatalog,
   listBuiltinCorpora,
+  prepareBuiltinCorpora,
   searchLocalCorpora,
   type LocalCorpusDefinition
 } from "./retrieval/local.js";
+
+export { runDiagnosticPipeline } from "./diagnostic-pipeline.js";
 
 export {
   loadProfileFromFile,

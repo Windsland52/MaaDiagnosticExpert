@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "profileId": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "project": {
+      "type": "object",
+      "properties": {
+        "project_root": {
+          "type": "string",
+          "minLength": 1
+        },
+        "interface_file": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "project_root"
+      ],
+      "additionalProperties": false
+    },
+    "queries": {
+      "default": {
+        "task_definitions": [],
+        "node_definitions": [],
+        "diagnostics": true
+      },
+      "type": "object",
+      "properties": {
+        "task_definitions": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "node_definitions": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "diagnostics": {
+          "default": true,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "task_definitions",
+        "node_definitions",
+        "diagnostics"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "project",
+    "queries"
+  ],
+  "additionalProperties": false,
+  "$id": "https://maa-diagnostic-expert/contracts/maa-support-extension-runtime-input.schema.json",
+  "title": "MaaSupportExtensionRuntimeInput",
+  "description": "Adapter input contract for running Maa Support Extension from the local core runtime."
+}

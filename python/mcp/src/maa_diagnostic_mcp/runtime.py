@@ -108,6 +108,18 @@ class CoreCliRuntime:
         args = ["--with-report"] if with_report else []
         return self._run("run-mla-runtime", payload=payload, args=args)
 
+    def normalize_mse_result(
+        self, payload: dict[str, Any], *, with_report: bool = False
+    ) -> dict[str, Any]:
+        args = ["--with-report"] if with_report else []
+        return self._run("normalize-mse-result", payload=payload, args=args)
+
+    def run_mse_runtime(
+        self, payload: dict[str, Any], *, with_report: bool = False
+    ) -> dict[str, Any]:
+        args = ["--with-report"] if with_report else []
+        return self._run("run-mse-runtime", payload=payload, args=args)
+
     def validate_profile(self, profile_path: str | Path) -> dict[str, Any]:
         return self._run("validate-profile", args=["--input", str(profile_path)])
 
@@ -120,8 +132,17 @@ class CoreCliRuntime:
     def list_builtin_corpora(self) -> dict[str, Any]:
         return self._run("list-builtin-corpora")
 
+    def prepare_builtin_corpora(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._run("prepare-builtin-corpora", payload=payload)
+
     def search_local_corpus(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self._run("search-local-corpus", payload=payload)
+
+    def run_diagnostic_pipeline(
+        self, payload: dict[str, Any], *, with_report: bool = False
+    ) -> dict[str, Any]:
+        args = ["--with-report"] if with_report else []
+        return self._run("run-diagnostic-pipeline", payload=payload, args=args)
 
     def describe_runtime(self) -> dict[str, Any]:
         return self._run("describe-runtime")

@@ -13,17 +13,23 @@ const CORE_CLI_COMMANDS = [
   "render-report",
   "normalize-mla-result",
   "run-mla-runtime",
+  "normalize-mse-result",
+  "run-mse-runtime",
   "validate-profile",
   "show-builtin-profile",
   "list-builtin-profiles",
   "list-builtin-corpora",
+  "prepare-builtin-corpora",
   "search-local-corpus",
+  "run-diagnostic-pipeline",
   "describe-runtime"
 ] as const;
 
 const CORE_ADAPTERS = [
   "maa-log-analyzer",
-  "maa-log-analyzer-runtime"
+  "maa-log-analyzer-runtime",
+  "maa-support-extension",
+  "maa-support-extension-runtime"
 ] as const;
 
 type PackageJsonShape = {

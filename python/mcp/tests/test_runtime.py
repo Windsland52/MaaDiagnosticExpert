@@ -39,6 +39,7 @@ class CoreCliRuntimeTests(unittest.TestCase):
         profile = self.runtime.show_builtin_profile("generic-maa-log")
         self.assertEqual(profile["id"], "generic-maa-log")
         self.assertTrue(profile["recommendedTools"])
+        self.assertIn("maafw-docs", profile["recommendedCorpora"])
 
     def test_list_builtin_profiles(self) -> None:
         catalog = self.runtime.list_builtin_profiles()
@@ -48,27 +49,99 @@ class CoreCliRuntimeTests(unittest.TestCase):
     def test_list_builtin_corpora(self) -> None:
         catalog = self.runtime.list_builtin_corpora()
         self.assertEqual(catalog["apiVersion"], "corpus-catalog/v1")
+        self.assertTrue(any(item["id"] == "maafw-docs" for item in catalog["corpora"]))
         self.assertTrue(any(item["id"] == "diagnostic-guides" for item in catalog["corpora"]))
 
     def test_search_local_corpus(self) -> None:
         result = self.runtime.search_local_corpus(
             {
                 "apiVersion": "retrieval-query/v1",
-                "query": "runtime discovery contract",
-                "corpusIds": ["diagnostic-guides"],
+                "query": "next on_error timeout",
+                "corpusIds": ["maafw-docs"],
                 "limit": 3,
             }
         )
 
         self.assertEqual(result["apiVersion"], "retrieval-result/v1")
-        self.assertEqual(result["corpusIds"], ["diagnostic-guides"])
+        self.assertEqual(result["corpusIds"], ["maafw-docs"])
         self.assertGreaterEqual(result["stats"]["fileCount"], 1)
         self.assertGreaterEqual(len(result["hits"]), 1)
+        self.assertTrue(result["hits"][0]["path"].startswith("sample/MaaFramework/docs/"))
+
+    def test_prepare_builtin_corpora(self) -> None:
+        result = self.runtime.prepare_builtin_corpora(
+            {
+                "apiVersion": "corpus-prepare/v1",
+                "corpusIds": ["diagnostic-guides"],
+                "force": True,
+            }
+        )
+
+        self.assertEqual(result["apiVersion"], "corpus-prepare-result/v1")
+        self.assertEqual(result["prepared"][0]["corpusId"], "diagnostic-guides")
+        self.assertTrue(result["prepared"][0]["cachePath"].endswith("diagnostic-guides.json"))
+
+    def test_run_diagnostic_pipeline(self) -> None:
+        result = self.runtime.run_diagnostic_pipeline(
+            {
+                "apiVersion": "diagnostic-pipeline/v1",
+                "profileId": "generic-maa-log",
+                "mla": {
+                    "mode": "result",
+                    "input": {
+                        "profileId": "generic-maa-log",
+                        "results": [
+                            {
+                                "tool": "get_task_overview",
+                                "response": {
+                                    "request_id": "req-1",
+                                    "api_version": "v1",
+                                    "ok": True,
+                                    "data": {
+                                        "task": {
+                                            "task_id": 1,
+                                            "entry": "DailyRewards",
+                                            "status": "failed",
+                                            "duration_ms": 100,
+                                        },
+                                        "summary": {
+                                            "node_count": 2,
+                                            "failed_node_count": 1,
+                                            "reco_failed_count": 1,
+                                        },
+                                        "evidences": [],
+                                    },
+                                    "meta": {
+                                        "duration_ms": 1,
+                                        "warnings": [],
+                                    },
+                                    "error": None,
+                                },
+                            }
+                        ],
+                    },
+                },
+                "retrieval": {
+                    "enabled": False,
+                    "corpusIds": [],
+                    "queryHints": [],
+                    "limitPerQuery": 2,
+                    "maxHits": 5,
+                },
+            }
+        )
+
+        self.assertEqual(result["apiVersion"], "core/v1")
+        self.assertIn("diagnostic-pipeline", result["rawToolResults"])
+        self.assertEqual(result["profileId"], "generic-maa-log")
 
     def test_describe_runtime(self) -> None:
         runtime_info = self.runtime.describe_runtime()
         self.assertEqual(runtime_info["apiVersion"], "runtime/v1")
         self.assertIn("describe-runtime", runtime_info["commands"])
+        self.assertIn("prepare-builtin-corpora", runtime_info["commands"])
+        self.assertIn("run-diagnostic-pipeline", runtime_info["commands"])
+        self.assertIn("maafw-docs", runtime_info["builtinCorpusIds"])
         self.assertIn("diagnostic-guides", runtime_info["builtinCorpusIds"])
 
     def test_missing_profile_raises_structured_core_error(self) -> None:
@@ -97,6 +170,8 @@ class ToolingTests(unittest.TestCase):
         specs = toolset.list_tool_specs()
         self.assertGreaterEqual(len(specs), 5)
         self.assertTrue(all(spec.error_contract == "core_error" for spec in specs))
+        self.assertTrue(any(spec.name == "prepare_builtin_corpora" for spec in specs))
+        self.assertTrue(any(spec.name == "run_diagnostic_pipeline" for spec in specs))
 
     def test_tool_spec_converts_to_official_mcp_tool(self) -> None:
         toolset = CoreToolset(CoreCliRuntime())
@@ -214,6 +289,8 @@ class McpServerTests(unittest.IsolatedAsyncioTestCase):
         self.assertGreaterEqual(len(result.tools), 5)
         self.assertTrue(any(tool.name == "empty_result" for tool in result.tools))
         self.assertTrue(any(tool.name == "search_local_corpus" for tool in result.tools))
+        self.assertTrue(any(tool.name == "prepare_builtin_corpora" for tool in result.tools))
+        self.assertTrue(any(tool.name == "run_diagnostic_pipeline" for tool in result.tools))
         self.assertTrue(all(tool.inputSchema for tool in result.tools))
 
     async def test_tools_call_success(self) -> None:
@@ -231,6 +308,89 @@ class McpServerTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(result.isError)
         self.assertEqual(result.structuredContent["profileId"], "generic-maa-log")
+
+    async def test_tools_call_search_local_corpus(self) -> None:
+        result = await asyncio.wait_for(
+            self._run_with_session(
+                lambda session: session.call_tool(
+                    "search_local_corpus",
+                    {
+                        "apiVersion": "retrieval-query/v1",
+                        "query": "ProjectInterfaceV2",
+                        "corpusIds": ["maafw-docs"],
+                        "limit": 3,
+                    },
+                )
+            ),
+            timeout=10,
+        )
+
+        self.assertFalse(result.isError)
+        self.assertEqual(result.structuredContent["apiVersion"], "retrieval-result/v1")
+        self.assertEqual(result.structuredContent["corpusIds"], ["maafw-docs"])
+        self.assertGreaterEqual(len(result.structuredContent["hits"]), 1)
+
+    async def test_tools_call_run_diagnostic_pipeline(self) -> None:
+        result = await asyncio.wait_for(
+            self._run_with_session(
+                lambda session: session.call_tool(
+                    "run_diagnostic_pipeline",
+                    {
+                        "input": {
+                            "apiVersion": "diagnostic-pipeline/v1",
+                            "profileId": "generic-maa-log",
+                            "mla": {
+                                "mode": "result",
+                                "input": {
+                                    "profileId": "generic-maa-log",
+                                    "results": [
+                                        {
+                                            "tool": "get_task_overview",
+                                            "response": {
+                                                "request_id": "req-1",
+                                                "api_version": "v1",
+                                                "ok": True,
+                                                "data": {
+                                                    "task": {
+                                                        "task_id": 1,
+                                                        "entry": "DailyRewards",
+                                                        "status": "failed",
+                                                        "duration_ms": 100,
+                                                    },
+                                                    "summary": {
+                                                        "node_count": 2,
+                                                        "failed_node_count": 1,
+                                                        "reco_failed_count": 1,
+                                                    },
+                                                    "evidences": [],
+                                                },
+                                                "meta": {
+                                                    "duration_ms": 1,
+                                                    "warnings": [],
+                                                },
+                                                "error": None,
+                                            },
+                                        }
+                                    ],
+                                },
+                            },
+                            "retrieval": {
+                                "enabled": False,
+                                "corpusIds": [],
+                                "queryHints": [],
+                                "limitPerQuery": 2,
+                                "maxHits": 5,
+                            },
+                        }
+                    },
+                )
+            ),
+            timeout=10,
+        )
+
+        self.assertFalse(result.isError)
+        self.assertEqual(result.structuredContent["profileId"], "generic-maa-log")
+        self.assertIn("diagnostic-pipeline", result.structuredContent["rawToolResults"])
 
     async def test_tools_call_returns_tool_error(self) -> None:
         result = await asyncio.wait_for(

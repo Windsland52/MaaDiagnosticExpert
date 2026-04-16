@@ -115,10 +115,15 @@ contracts/        # 跨语言共享的 JSON schema / profile schema
 - `profile-catalog.schema.json`
 - `runtime-info.schema.json`
 - `corpus-catalog.schema.json`
+- `corpus-prepare-input.schema.json`
+- `corpus-prepare-result.schema.json`
 - `corpus-search-input.schema.json`
 - `corpus-search-result.schema.json`
 - `maa-log-analyzer-batch-input.schema.json`
 - `maa-log-analyzer-runtime-input.schema.json`
+- `maa-support-extension-batch-input.schema.json`
+- `maa-support-extension-runtime-input.schema.json`
+- `diagnostic-pipeline-input.schema.json`
 
 生成命令：
 
@@ -180,6 +185,7 @@ pnpm run run:python-mcp-cli -- invoke --tool describe_runtime
 pnpm run run:core-cli -- describe-runtime
 pnpm run run:core-cli -- list-builtin-profiles
 pnpm run run:core-cli -- list-builtin-corpora
+pnpm run run:core-cli -- prepare-builtin-corpora --input /path/to/corpus-prepare-input.json
 ```
 
 其中：
@@ -188,19 +194,43 @@ pnpm run run:core-cli -- list-builtin-corpora
 - `list-builtin-profiles` 返回内置 profile 目录，便于外部系统决定默认策略或做参数校验
 - `list-builtin-corpora` 返回内置本地 corpus 目录，便于外部系统决定检索范围
 
+当前默认内置 corpus 包括：
+
+- `maafw-docs`：本地 `sample/MaaFramework/docs` 文档
+- `diagnostic-guides`：本仓库诊断设计文档
+- `repo-docs`：本仓库 `docs/`
+- `repo-examples`：本仓库 `examples/`
+
 如果要做确定性的本地文档检索：
 
 ```bash
+pnpm run run:core-cli -- prepare-builtin-corpora --input /path/to/corpus-prepare-input.json
 pnpm run run:core-cli -- search-local-corpus --input /path/to/search-input.json
 ```
 
 对应输入 contract：
 
+- `contracts/corpus-prepare-input.schema.json`
 - `contracts/corpus-search-input.schema.json`
 
 对应输出 contract：
 
+- `contracts/corpus-prepare-result.schema.json`
 - `contracts/corpus-search-result.schema.json`
+
+如果要直接跑跨工具诊断流水线：
+
+```bash
+pnpm run run:core-cli -- run-diagnostic-pipeline --input /path/to/diagnostic-pipeline-input.json --with-report
+```
+
+这个命令会把：
+
+- `maa-log-analyzer`
+- `maa-support-extension`
+- 本地 corpus retrieval
+
+合并成一个 `CoreResult`，供外部 agent / MCP client 继续消费。
 
 如果走 Python MCP 包装层，也提供了同名工具：
 
@@ -208,7 +238,9 @@ pnpm run run:core-cli -- search-local-corpus --input /path/to/search-input.json
 pnpm run run:python-mcp-cli -- invoke --tool describe_runtime
 pnpm run run:python-mcp-cli -- invoke --tool list_builtin_profiles
 pnpm run run:python-mcp-cli -- invoke --tool list_builtin_corpora
+pnpm run run:python-mcp-cli -- invoke --tool prepare_builtin_corpora --input /path/to/corpus-prepare-input.json
 pnpm run run:python-mcp-cli -- invoke --tool search_local_corpus --input /path/to/search-input.json
+pnpm run run:python-mcp-cli -- invoke --tool run_diagnostic_pipeline --input /path/to/diagnostic-pipeline-input.json --with-report
 ```
 
 这两项能力的目标不是“分析日志”，而是让外部系统先识别：

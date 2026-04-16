@@ -1,0 +1,212 @@
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
+import { afterEach, describe, expect, it } from "vitest";
+
+import { runDiagnosticPipeline } from "../diagnostic-pipeline.js";
+
+const tempDirs: string[] = [];
+
+async function createMaaProjectFixture(): Promise<string> {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), "maa-diagnostic-pipeline-"));
+  tempDirs.push(projectRoot);
+
+  await mkdir(path.join(projectRoot, "assets", "resource", "pipeline"), { recursive: true });
+  await mkdir(path.join(projectRoot, "tasks"), { recursive: true });
+
+  await writeFile(
+    path.join(projectRoot, "assets", "interface.json"),
+    JSON.stringify(
+      {
+        interface_version: 2,
+        name: "Pipeline Fixture",
+        controller: [{ name: "Win32" }],
+        resource: [{ name: "default" }],
+        import: ["../tasks/Daily.json"]
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+
+  await writeFile(
+    path.join(projectRoot, "tasks", "Daily.json"),
+    JSON.stringify(
+      {
+        task: [
+          {
+            name: "DailyRewards",
+            entry: "StartNode",
+            option: ["UsePotion"]
+          }
+        ],
+        option: {
+          UsePotion: {
+            type: "checkbox"
+          }
+        }
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+
+  await writeFile(
+    path.join(projectRoot, "assets", "resource", "pipeline", "DailyRewards.json"),
+    JSON.stringify(
+      {
+        StartNode: {
+          next: ["RewardNode"],
+          on_error: ["RecoverNode"]
+        },
+        RewardNode: {
+          next: []
+        },
+        RecoverNode: {
+          next: ["RewardNode"]
+        }
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+
+  return projectRoot;
+}
+
+afterEach(async () => {
+  await Promise.all(tempDirs.splice(0).map((tempDir) => rm(tempDir, { recursive: true, force: true })));
+});
+
+describe("diagnostic pipeline", () => {
+  it("merges MLA, MSE and local retrieval into one core result", async () => {
+    const projectRoot = await createMaaProjectFixture();
+
+    const result = await runDiagnosticPipeline(
+      {
+        apiVersion: "diagnostic-pipeline/v1",
+        profileId: "generic-maa-log",
+        mla: {
+          mode: "result",
+          input: {
+            profileId: "generic-maa-log",
+            results: [
+              {
+                tool: "parse_log_bundle",
+                response: {
+                  request_id: "mla-1",
+                  api_version: "v1",
+                  ok: true,
+                  data: {
+                    session_id: "session-1",
+                    task_count: 1,
+                    event_count: 12,
+                    warnings: []
+                  },
+                  meta: {
+                    duration_ms: 1,
+                    warnings: []
+                  },
+                  error: null
+                }
+              },
+              {
+                tool: "get_task_overview",
+                response: {
+                  request_id: "mla-2",
+                  api_version: "v1",
+                  ok: true,
+                  data: {
+                    task: {
+                      task_id: 7,
+                      entry: "DailyRewards",
+                      status: "failed",
+                      duration_ms: 1234
+                    },
+                    summary: {
+                      node_count: 4,
+                      failed_node_count: 1,
+                      reco_failed_count: 2
+                    },
+                    evidences: []
+                  },
+                  meta: {
+                    duration_ms: 1,
+                    warnings: []
+                  },
+                  error: null
+                }
+              },
+              {
+                tool: "get_node_timeline",
+                response: {
+                  request_id: "mla-3",
+                  api_version: "v1",
+                  ok: true,
+                  data: {
+                    timeline: [
+                      {
+                        scope_id: "node-1",
+                        occurrence_index: 1,
+                        ts: "2026-04-16T00:00:00Z",
+                        event: "enter",
+                        node_id: 11,
+                        name: "StartNode",
+                        source_key: "maa.log",
+                        line: 42
+                      }
+                    ],
+                    evidences: []
+                  },
+                  meta: {
+                    duration_ms: 1,
+                    warnings: []
+                  },
+                  error: null
+                }
+              }
+            ]
+          }
+        },
+        mse: {
+          mode: "runtime",
+          input: {
+            project: {
+              project_root: projectRoot,
+              interface_file: "assets/interface.json"
+            },
+            queries: {
+              task_definitions: [],
+              node_definitions: [],
+              diagnostics: true
+            }
+          }
+        },
+        retrieval: {
+          enabled: true,
+          corpusIds: ["repo-docs"],
+          queryHints: ["CoreResult", "interface.json task option"],
+          limitPerQuery: 2,
+          maxHits: 5
+        }
+      },
+      {
+        withReport: true
+      }
+    );
+
+    expect(result.profileId).toBe("generic-maa-log");
+    expect(result.rawToolResults["maa-log-analyzer"]).toBeDefined();
+    expect(result.rawToolResults["maa-support-extension"]).toBeDefined();
+    expect(result.rawToolResults["diagnostic-pipeline"]).toBeDefined();
+    expect(result.diagnosticMeta.findings.some((item) => item.kind === "task_definition_resolved")).toBe(true);
+    expect(result.diagnosticMeta.findings.some((item) => item.kind === "entry_node_resolved")).toBe(true);
+    expect(result.diagnosticMeta.retrievalHits.length).toBeGreaterThan(0);
+    expect(result.diagnosticMeta.profileHints.some((item) => item.kind === "recommended_tool")).toBe(true);
+    expect(result.report?.format).toBe("markdown");
+  });
+});

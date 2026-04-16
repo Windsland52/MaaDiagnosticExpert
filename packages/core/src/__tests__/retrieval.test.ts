@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  prepareBuiltinCorpora,
   searchLocalCorpora,
   type LocalCorpusDefinition
 } from "../retrieval/local.js";
@@ -70,5 +71,63 @@ describe("local retrieval", () => {
     expect(result.hits).toHaveLength(1);
     expect(result.hits[0]?.path).toBe("docs/guide.md");
     expect(result.hits[0]?.snippet).toContain("describe-runtime");
+  });
+
+  it("prepares and reuses a local corpus index", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "maa-diagnostic-core-"));
+    tempDirs.push(workspaceRoot);
+
+    await mkdir(path.join(workspaceRoot, "docs"), { recursive: true });
+    await writeFile(
+      path.join(workspaceRoot, "docs", "runtime.md"),
+      [
+        "# Runtime",
+        "",
+        "ProjectInterfaceV2 documents interface.json and task option semantics.",
+        "Search results should be served from the prepared corpus cache."
+      ].join("\n"),
+      "utf8"
+    );
+
+    const corpora: LocalCorpusDefinition[] = [
+      {
+        id: "test-guides",
+        name: "Test Guides",
+        description: "Temporary corpus used by unit tests.",
+        rootPaths: ["docs"],
+        includeGlobs: ["**/*.md"],
+        tags: ["test"]
+      }
+    ];
+
+    const prepared = await prepareBuiltinCorpora(
+      {
+        apiVersion: "corpus-prepare/v1",
+        corpusIds: ["test-guides"],
+        force: true
+      },
+      {
+        workspaceRoot,
+        corpora
+      }
+    );
+
+    const result = await searchLocalCorpora(
+      {
+        apiVersion: "retrieval-query/v1",
+        query: "ProjectInterfaceV2 interface.json",
+        corpusIds: ["test-guides"],
+        limit: 3
+      },
+      {
+        workspaceRoot,
+        corpora
+      }
+    );
+
+    expect(prepared.prepared).toHaveLength(1);
+    expect(prepared.prepared[0]?.cachePath).toBe(".cache/corpora/test-guides.json");
+    expect(prepared.prepared[0]?.chunkCount).toBeGreaterThan(0);
+    expect(result.hits[0]?.metadata.prepared).toBe("true");
   });
 });

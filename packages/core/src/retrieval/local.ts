@@ -1,17 +1,23 @@
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import fg from "fast-glob";
+import { z } from "zod";
 
 import {
   CorpusCatalogSchema,
+  CorpusPrepareInputSchema,
+  CorpusPrepareResultSchema,
   CorpusSearchInputSchema,
   CorpusSearchResultSchema,
   type CorpusCatalog,
+  type CorpusPrepareInput,
+  type CorpusPrepareResult,
   type CorpusSearchInput,
   type CorpusSearchResult,
-  type CorpusSummary
+  type CorpusSummary,
+  type PreparedCorpusSummary
 } from "../models/corpus.js";
 import type { RetrievalHit } from "../models/retrieval.js";
 
@@ -29,6 +35,8 @@ type SearchLocalCorporaOptions = {
   corpora?: LocalCorpusDefinition[];
 };
 
+type PrepareBuiltinCorporaOptions = SearchLocalCorporaOptions;
+
 type ResolvedCorpusFile = {
   absolutePath: string;
   relativePath: string;
@@ -43,9 +51,64 @@ type SnippetMatch = {
   lineEnd: number;
 };
 
+type PreparedCorpusChunk = {
+  id: string;
+  path: string;
+  title: string;
+  section?: string;
+  lineStart: number;
+  lineEnd: number;
+  snippet: string;
+  searchText: string;
+  tags: string[];
+};
+
+type PreparedCorpusIndex = {
+  apiVersion: "corpus-index/v1";
+  corpusId: string;
+  generatedAt: string;
+  fileCount: number;
+  chunkCount: number;
+  chunks: PreparedCorpusChunk[];
+};
+
+const PreparedCorpusChunkSchema = z.object({
+  id: z.string().min(1),
+  path: z.string().min(1),
+  title: z.string().min(1),
+  section: z.string().min(1).optional(),
+  lineStart: z.int().positive(),
+  lineEnd: z.int().positive(),
+  snippet: z.string().min(1),
+  searchText: z.string().min(1),
+  tags: z.array(z.string().min(1)).default([])
+});
+
+const PreparedCorpusIndexSchema = z.object({
+  apiVersion: z.literal("corpus-index/v1"),
+  corpusId: z.string().min(1),
+  generatedAt: z.string().min(1),
+  fileCount: z.int().nonnegative(),
+  chunkCount: z.int().nonnegative(),
+  chunks: z.array(PreparedCorpusChunkSchema).default([])
+});
+
 const MAX_SNIPPET_LINES = 3;
+const MAX_MARKDOWN_CHUNK_LINES = 18;
+const MAX_GENERIC_CHUNK_LINES = 20;
 
 export const BuiltinCorpusDefinitions: readonly LocalCorpusDefinition[] = [
+  {
+    id: "maafw-docs",
+    name: "MaaFramework Docs",
+    description: "Local MaaFramework reference documentation mirrored under sample/MaaFramework.",
+    rootPaths: [
+      "sample/MaaFramework/docs/zh_cn",
+      "sample/MaaFramework/docs/en_us"
+    ],
+    includeGlobs: ["**/*.md"],
+    tags: ["maafw", "framework", "docs"]
+  },
   {
     id: "diagnostic-guides",
     name: "Diagnostic Guides",
@@ -94,6 +157,27 @@ function toCorpusSummary(definition: LocalCorpusDefinition): CorpusSummary {
 
 function normalizePath(input: string): string {
   return input.split(path.sep).join("/");
+}
+
+function resolveSelectedCorpora(
+  allCorpora: readonly LocalCorpusDefinition[],
+  corpusIds: string[]
+): LocalCorpusDefinition[] {
+  if (corpusIds.length === 0) {
+    return [...allCorpora];
+  }
+
+  const selected: LocalCorpusDefinition[] = [];
+  for (const corpusId of corpusIds) {
+    const corpus = allCorpora.find((item) => item.id === corpusId);
+    if (!corpus) {
+      throw new Error(`Unknown corpus: ${corpusId}`);
+    }
+
+    selected.push(corpus);
+  }
+
+  return selected;
 }
 
 function tokenizeQuery(query: string): string[] {
@@ -237,31 +321,208 @@ async function resolveCorpusFiles(
   });
 }
 
-function resolveSelectedCorpora(
-  allCorpora: readonly LocalCorpusDefinition[],
-  corpusIds: string[]
-): LocalCorpusDefinition[] {
-  if (corpusIds.length === 0) {
-    return [...allCorpora];
+function createChunk(
+  corpusId: string,
+  relativePath: string,
+  title: string,
+  section: string | undefined,
+  lineStart: number,
+  lineEnd: number,
+  lines: string[],
+  tags: string[]
+): PreparedCorpusChunk | null {
+  const snippet = collapseSnippet(lines);
+  if (!snippet) {
+    return null;
   }
 
-  const selected: LocalCorpusDefinition[] = [];
-  for (const corpusId of corpusIds) {
-    const corpus = allCorpora.find((item) => item.id === corpusId);
-    if (!corpus) {
-      throw new Error(`Unknown corpus: ${corpusId}`);
+  return {
+    id: `${corpusId}:${relativePath}:${lineStart}`,
+    path: relativePath,
+    title,
+    section,
+    lineStart,
+    lineEnd,
+    snippet,
+    searchText: [title, section ?? "", snippet].filter((item) => item.length > 0).join("\n"),
+    tags
+  };
+}
+
+function createMarkdownChunks(
+  corpusId: string,
+  relativePath: string,
+  content: string,
+  tags: string[]
+): PreparedCorpusChunk[] {
+  const lines = content.split(/\r?\n/);
+  const chunks: PreparedCorpusChunk[] = [];
+  let documentTitle = findDocumentTitle(lines, path.basename(relativePath));
+  let currentSection: string | undefined;
+  let buffer: string[] = [];
+  let bufferStart = 1;
+
+  const flush = (lineEnd: number) => {
+    const chunk = createChunk(
+      corpusId,
+      relativePath,
+      documentTitle,
+      currentSection,
+      bufferStart,
+      lineEnd,
+      buffer,
+      tags
+    );
+    if (chunk) {
+      chunks.push(chunk);
+    }
+    buffer = [];
+    bufferStart = lineEnd + 1;
+  };
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const headingMatch = /^\s{0,3}(#{1,6})\s+(.+?)\s*$/.exec(line);
+    if (headingMatch) {
+      if (buffer.length > 0) {
+        flush(index);
+      }
+
+      const level = headingMatch[1].length;
+      const heading = headingMatch[2].trim();
+      if (level === 1) {
+        documentTitle = heading;
+        currentSection = undefined;
+      }
+      else {
+        currentSection = heading;
+      }
     }
 
-    selected.push(corpus);
+    buffer.push(line);
+    if (buffer.length >= MAX_MARKDOWN_CHUNK_LINES) {
+      flush(index + 1);
+    }
   }
 
-  return selected;
+  if (buffer.length > 0) {
+    flush(lines.length);
+  }
+
+  return chunks;
+}
+
+function createGenericChunks(
+  corpusId: string,
+  relativePath: string,
+  content: string,
+  tags: string[]
+): PreparedCorpusChunk[] {
+  const lines = content.split(/\r?\n/);
+  const chunks: PreparedCorpusChunk[] = [];
+  const title = path.basename(relativePath);
+
+  for (let index = 0; index < lines.length; index += MAX_GENERIC_CHUNK_LINES) {
+    const slice = lines.slice(index, index + MAX_GENERIC_CHUNK_LINES);
+    const chunk = createChunk(
+      corpusId,
+      relativePath,
+      title,
+      undefined,
+      index + 1,
+      index + slice.length,
+      slice,
+      tags
+    );
+    if (chunk) {
+      chunks.push(chunk);
+    }
+  }
+
+  return chunks;
+}
+
+function createChunksForFile(
+  corpusId: string,
+  relativePath: string,
+  content: string,
+  tags: string[]
+): PreparedCorpusChunk[] {
+  if (relativePath.toLowerCase().endsWith(".md")) {
+    return createMarkdownChunks(corpusId, relativePath, content, tags);
+  }
+
+  return createGenericChunks(corpusId, relativePath, content, tags);
+}
+
+function resolveCorpusCachePath(workspaceRoot: string, corpusId: string): string {
+  return path.resolve(workspaceRoot, ".cache", "corpora", `${corpusId}.json`);
+}
+
+async function readPreparedCorpus(
+  workspaceRoot: string,
+  corpusId: string
+): Promise<PreparedCorpusIndex | null> {
+  try {
+    const content = await readFile(resolveCorpusCachePath(workspaceRoot, corpusId), "utf8");
+    return PreparedCorpusIndexSchema.parse(JSON.parse(content));
+  }
+  catch {
+    return null;
+  }
+}
+
+async function prepareCorpus(
+  workspaceRoot: string,
+  definition: LocalCorpusDefinition,
+  force: boolean
+): Promise<PreparedCorpusSummary> {
+  const cachePath = resolveCorpusCachePath(workspaceRoot, definition.id);
+  if (!force) {
+    const existing = await readPreparedCorpus(workspaceRoot, definition.id);
+    if (existing) {
+      return {
+        corpusId: definition.id,
+        cachePath: normalizePath(path.relative(workspaceRoot, cachePath)),
+        fileCount: existing.fileCount,
+        chunkCount: existing.chunkCount
+      };
+    }
+  }
+
+  const files = await resolveCorpusFiles(workspaceRoot, definition);
+  const chunks: PreparedCorpusChunk[] = [];
+
+  for (const file of files) {
+    const content = await readFile(file.absolutePath, "utf8");
+    chunks.push(...createChunksForFile(definition.id, file.relativePath, content, definition.tags));
+  }
+
+  const index: PreparedCorpusIndex = {
+    apiVersion: "corpus-index/v1",
+    corpusId: definition.id,
+    generatedAt: new Date().toISOString(),
+    fileCount: files.length,
+    chunkCount: chunks.length,
+    chunks
+  };
+
+  await mkdir(path.dirname(cachePath), { recursive: true });
+  await writeFile(cachePath, `${JSON.stringify(index, null, 2)}\n`, "utf8");
+
+  return {
+    corpusId: definition.id,
+    cachePath: normalizePath(path.relative(workspaceRoot, cachePath)),
+    fileCount: files.length,
+    chunkCount: chunks.length
+  };
 }
 
 function toRetrievalHit(
   corpusId: string,
   relativePath: string,
-  match: SnippetMatch
+  match: SnippetMatch,
+  tags: string[] = []
 ): RetrievalHit {
   return {
     id: `${corpusId}:${relativePath}:${match.lineStart}`,
@@ -271,12 +532,43 @@ function toRetrievalHit(
     section: match.section,
     score: Number(match.score.toFixed(2)),
     snippet: match.snippet,
-    tags: [],
+    tags,
     metadata: {
       lineStart: String(match.lineStart),
       lineEnd: String(match.lineEnd)
     }
   };
+}
+
+function searchPreparedCorpus(index: PreparedCorpusIndex, query: string): RetrievalHit[] {
+  const tokens = tokenizeQuery(query);
+  const normalizedQuery = query.trim().toLowerCase();
+  const hits: RetrievalHit[] = [];
+
+  for (const chunk of index.chunks) {
+    const score = scoreText(chunk.searchText, normalizedQuery, tokens);
+    if (score <= 0) {
+      continue;
+    }
+
+    hits.push({
+      id: chunk.id,
+      corpus: index.corpusId,
+      path: chunk.path,
+      title: chunk.title,
+      section: chunk.section,
+      score: Number(score.toFixed(2)),
+      snippet: chunk.snippet,
+      tags: chunk.tags,
+      metadata: {
+        lineStart: String(chunk.lineStart),
+        lineEnd: String(chunk.lineEnd),
+        prepared: "true"
+      }
+    });
+  }
+
+  return hits;
 }
 
 export function buildCorpusCatalog(
@@ -290,6 +582,27 @@ export function buildCorpusCatalog(
 
 export function listBuiltinCorpora(): CorpusSummary[] {
   return buildCorpusCatalog().corpora;
+}
+
+export async function prepareBuiltinCorpora(
+  input: CorpusPrepareInput,
+  options: PrepareBuiltinCorporaOptions = {}
+): Promise<CorpusPrepareResult> {
+  const parsedInput = CorpusPrepareInputSchema.parse(input);
+  const workspaceRoot = options.workspaceRoot ?? resolveRepoRoot();
+  const corpora = resolveSelectedCorpora(
+    options.corpora ?? BuiltinCorpusDefinitions,
+    parsedInput.corpusIds
+  );
+
+  const prepared = await Promise.all(
+    corpora.map((corpus) => prepareCorpus(workspaceRoot, corpus, parsedInput.force))
+  );
+
+  return CorpusPrepareResultSchema.parse({
+    apiVersion: "corpus-prepare-result/v1",
+    prepared
+  });
 }
 
 export async function searchLocalCorpora(
@@ -307,6 +620,13 @@ export async function searchLocalCorpora(
   let fileCount = 0;
 
   for (const corpus of corpora) {
+    const prepared = await readPreparedCorpus(workspaceRoot, corpus.id);
+    if (prepared) {
+      fileCount += prepared.fileCount;
+      hits.push(...searchPreparedCorpus(prepared, parsedInput.query));
+      continue;
+    }
+
     const files = await resolveCorpusFiles(workspaceRoot, corpus);
     fileCount += files.length;
 
@@ -321,7 +641,7 @@ export async function searchLocalCorpora(
         continue;
       }
 
-      hits.push(toRetrievalHit(corpus.id, file.relativePath, match));
+      hits.push(toRetrievalHit(corpus.id, file.relativePath, match, corpus.tags));
     }
   }
 

@@ -39,8 +39,14 @@
   - 返回本地 `core` 暴露的内置 profile 清单
 - `list_builtin_corpora`
   - 返回本地 `core` 暴露的内置 corpus 清单
+- `prepare_builtin_corpora`
+  - 预构建本地 corpus 索引，后续 `search_local_corpus` 会优先复用缓存
 - `search_local_corpus`
   - 返回确定性的本地文档检索命中结果
+- `run_diagnostic_pipeline`
+  - 串联 `maa-log-analyzer`、`maa-support-extension` 和本地 corpus retrieval，输出合并后的 `CoreResult`
+
+当前内置 corpus 已包含 `maafw-docs`，对应仓库内的 `sample/MaaFramework/docs`。
 
 建议外部系统接入时先调这些发现型 tool，再决定后续如何调用执行型 tool。
 

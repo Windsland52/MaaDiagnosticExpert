@@ -65,6 +65,8 @@ pnpm run run:core-cli -- list-builtin-corpora
 - 当前内置 profile 清单
 - 当前内置 corpus 清单
 
+当前默认就会看到 `maafw-docs`，它来自本仓库里的 `sample/MaaFramework/docs`。
+
 如果走 Python 包装层，对应命令是：
 
 ```bash
@@ -76,11 +78,13 @@ pnpm run run:python-mcp-cli -- invoke --tool list_builtin_corpora
 如果在进入正式日志分析前，想先用仓库内文档做一次确定性背景检索，可以再执行：
 
 ```bash
+pnpm run run:core-cli -- prepare-builtin-corpora --input /path/to/corpus-prepare-input.json
 pnpm run run:core-cli -- search-local-corpus --input /path/to/search-input.json
 ```
 
 输入结构见：
 
+- [corpus-prepare-input.schema.json](/mnt/c/github/MaaDiagnosticExpert/contracts/corpus-prepare-input.schema.json)
 - [corpus-search-input.schema.json](/mnt/c/github/MaaDiagnosticExpert/contracts/corpus-search-input.schema.json)
 
 ## 第一步：准备输入模板
@@ -141,6 +145,18 @@ pnpm run run:python-mcp-cli -- invoke \
 ```bash
 pnpm run run:python-mcp-cli -- list-tools
 ```
+
+如果要直接把 MLA 结果、项目结构和本地文档检索串成一次执行，可以改用：
+
+```bash
+pnpm run run:core-cli -- run-diagnostic-pipeline \
+  --input /path/to/diagnostic-pipeline-input.json \
+  --with-report
+```
+
+对应输入结构见：
+
+- [diagnostic-pipeline-input.schema.json](/mnt/c/github/MaaDiagnosticExpert/contracts/diagnostic-pipeline-input.schema.json)
 
 如果要把它当成 stdio MCP server 给外部 agent 接：
 

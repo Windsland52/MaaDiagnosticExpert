@@ -50,10 +50,15 @@ PROFILE_CONTRACT = load_contract("profile")
 PROFILE_CATALOG_CONTRACT = load_contract("profile_catalog")
 RUNTIME_INFO_CONTRACT = load_contract("runtime_info")
 CORPUS_CATALOG_CONTRACT = load_contract("corpus_catalog")
+CORPUS_PREPARE_INPUT_CONTRACT = load_contract("corpus_prepare_input")
+CORPUS_PREPARE_RESULT_CONTRACT = load_contract("corpus_prepare_result")
 CORPUS_SEARCH_INPUT_CONTRACT = load_contract("corpus_search_input")
 CORPUS_SEARCH_RESULT_CONTRACT = load_contract("corpus_search_result")
+DIAGNOSTIC_PIPELINE_INPUT_CONTRACT = load_contract("diagnostic_pipeline_input")
 MLA_BATCH_INPUT_CONTRACT = load_contract("maa_log_analyzer_batch_input")
 MLA_RUNTIME_INPUT_CONTRACT = load_contract("maa_log_analyzer_runtime_input")
+MSE_BATCH_INPUT_CONTRACT = load_contract("maa_support_extension_batch_input")
+MSE_RUNTIME_INPUT_CONTRACT = load_contract("maa_support_extension_runtime_input")
 
 EMPTY_RESULT_INPUT_SCHEMA = _object_schema(
     {
@@ -94,6 +99,39 @@ NORMALIZE_MLA_RESULT_INPUT_SCHEMA = _object_schema(
 RUN_MLA_RUNTIME_INPUT_SCHEMA = _object_schema(
     {
         "input": MLA_RUNTIME_INPUT_CONTRACT,
+        "with_report": {
+            "type": "boolean",
+            "default": False,
+        },
+    },
+    required=["input"],
+)
+
+NORMALIZE_MSE_RESULT_INPUT_SCHEMA = _object_schema(
+    {
+        "input": MSE_BATCH_INPUT_CONTRACT,
+        "with_report": {
+            "type": "boolean",
+            "default": False,
+        },
+    },
+    required=["input"],
+)
+
+RUN_MSE_RUNTIME_INPUT_SCHEMA = _object_schema(
+    {
+        "input": MSE_RUNTIME_INPUT_CONTRACT,
+        "with_report": {
+            "type": "boolean",
+            "default": False,
+        },
+    },
+    required=["input"],
+)
+
+RUN_DIAGNOSTIC_PIPELINE_INPUT_SCHEMA = _object_schema(
+    {
+        "input": DIAGNOSTIC_PIPELINE_INPUT_CONTRACT,
         "with_report": {
             "type": "boolean",
             "default": False,
@@ -186,6 +224,20 @@ DEFAULT_TOOL_SPECS = [
         output_contract="core_result",
     ),
     ToolSpec(
+        name="normalize_mse_result",
+        description="Normalize existing Maa Support Extension tool results into CoreResult.",
+        input_schema=NORMALIZE_MSE_RESULT_INPUT_SCHEMA,
+        input_contract="maa_support_extension_batch_input",
+        output_contract="core_result",
+    ),
+    ToolSpec(
+        name="run_mse_runtime",
+        description="Run Maa Support Extension through the local core runtime and return CoreResult.",
+        input_schema=RUN_MSE_RUNTIME_INPUT_SCHEMA,
+        input_contract="maa_support_extension_runtime_input",
+        output_contract="core_result",
+    ),
+    ToolSpec(
         name="show_builtin_profile",
         description="Load a builtin profile by id.",
         input_schema=SHOW_BUILTIN_PROFILE_INPUT_SCHEMA,
@@ -207,11 +259,25 @@ DEFAULT_TOOL_SPECS = [
         output_contract="corpus_catalog",
     ),
     ToolSpec(
+        name="prepare_builtin_corpora",
+        description="Prepare builtin local corpora into deterministic on-disk indexes.",
+        input_schema=CORPUS_PREPARE_INPUT_CONTRACT,
+        input_contract="corpus_prepare_input",
+        output_contract="corpus_prepare_result",
+    ),
+    ToolSpec(
         name="search_local_corpus",
         description="Run deterministic local corpus search and return retrieval hits.",
         input_schema=CORPUS_SEARCH_INPUT_CONTRACT,
         input_contract="corpus_search_input",
         output_contract="corpus_search_result",
+    ),
+    ToolSpec(
+        name="run_diagnostic_pipeline",
+        description="Run the cross-tool diagnostic pipeline and return a merged CoreResult.",
+        input_schema=RUN_DIAGNOSTIC_PIPELINE_INPUT_SCHEMA,
+        input_contract="diagnostic_pipeline_input",
+        output_contract="core_result",
     ),
     ToolSpec(
         name="describe_runtime",
@@ -260,6 +326,16 @@ class CoreToolset:
     ) -> dict[str, Any]:
         return self.runtime.run_mla_runtime(payload, with_report=with_report)
 
+    def normalize_mse_result(
+        self, payload: dict[str, Any], *, with_report: bool = False
+    ) -> dict[str, Any]:
+        return self.runtime.normalize_mse_result(payload, with_report=with_report)
+
+    def run_mse_runtime(
+        self, payload: dict[str, Any], *, with_report: bool = False
+    ) -> dict[str, Any]:
+        return self.runtime.run_mse_runtime(payload, with_report=with_report)
+
     def show_builtin_profile(self, profile_id: str) -> dict[str, Any]:
         return self.runtime.show_builtin_profile(profile_id)
 
@@ -269,8 +345,16 @@ class CoreToolset:
     def list_builtin_corpora(self) -> dict[str, Any]:
         return self.runtime.list_builtin_corpora()
 
+    def prepare_builtin_corpora(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self.runtime.prepare_builtin_corpora(payload)
+
     def search_local_corpus(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self.runtime.search_local_corpus(payload)
+
+    def run_diagnostic_pipeline(
+        self, payload: dict[str, Any], *, with_report: bool = False
+    ) -> dict[str, Any]:
+        return self.runtime.run_diagnostic_pipeline(payload, with_report=with_report)
 
     def describe_runtime(self) -> dict[str, Any]:
         return self.runtime.describe_runtime()
@@ -309,6 +393,16 @@ class CoreToolset:
                 raise ValueError("payload is required for run_mla_runtime")
             return self.run_mla_runtime(payload, with_report=with_report)
 
+        if tool_name == "normalize_mse_result":
+            if payload is None:
+                raise ValueError("payload is required for normalize_mse_result")
+            return self.normalize_mse_result(payload, with_report=with_report)
+
+        if tool_name == "run_mse_runtime":
+            if payload is None:
+                raise ValueError("payload is required for run_mse_runtime")
+            return self.run_mse_runtime(payload, with_report=with_report)
+
         if tool_name == "show_builtin_profile":
             if not profile_id:
                 raise ValueError("profile_id is required for show_builtin_profile")
@@ -320,10 +414,20 @@ class CoreToolset:
         if tool_name == "list_builtin_corpora":
             return self.list_builtin_corpora()
 
+        if tool_name == "prepare_builtin_corpora":
+            if payload is None:
+                raise ValueError("payload is required for prepare_builtin_corpora")
+            return self.prepare_builtin_corpora(payload)
+
         if tool_name == "search_local_corpus":
             if payload is None:
                 raise ValueError("payload is required for search_local_corpus")
             return self.search_local_corpus(payload)
+
+        if tool_name == "run_diagnostic_pipeline":
+            if payload is None:
+                raise ValueError("payload is required for run_diagnostic_pipeline")
+            return self.run_diagnostic_pipeline(payload, with_report=with_report)
 
         if tool_name == "describe_runtime":
             return self.describe_runtime()

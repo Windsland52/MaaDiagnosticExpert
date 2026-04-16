@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "const": "corpus-prepare/v1"
+    },
+    "corpusIds": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "force": {
+      "default": false,
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "apiVersion",
+    "corpusIds",
+    "force"
+  ],
+  "additionalProperties": false,
+  "$id": "https://maa-diagnostic-expert/contracts/corpus-prepare-input.schema.json",
+  "title": "CorpusPrepareInput",
+  "description": "Input contract for preparing builtin local corpora."
+}

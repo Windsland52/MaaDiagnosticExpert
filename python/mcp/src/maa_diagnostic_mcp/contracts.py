@@ -11,10 +11,15 @@ CONTRACT_FILENAMES = {
     "profile_catalog": "profile-catalog.schema.json",
     "runtime_info": "runtime-info.schema.json",
     "corpus_catalog": "corpus-catalog.schema.json",
+    "corpus_prepare_input": "corpus-prepare-input.schema.json",
+    "corpus_prepare_result": "corpus-prepare-result.schema.json",
     "corpus_search_input": "corpus-search-input.schema.json",
     "corpus_search_result": "corpus-search-result.schema.json",
+    "diagnostic_pipeline_input": "diagnostic-pipeline-input.schema.json",
     "maa_log_analyzer_batch_input": "maa-log-analyzer-batch-input.schema.json",
     "maa_log_analyzer_runtime_input": "maa-log-analyzer-runtime-input.schema.json",
+    "maa_support_extension_batch_input": "maa-support-extension-batch-input.schema.json",
+    "maa_support_extension_runtime_input": "maa-support-extension-runtime-input.schema.json",
 }
 
 

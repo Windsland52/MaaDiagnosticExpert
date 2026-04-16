@@ -30,6 +30,24 @@ export const CorpusSearchStatsSchema = z.object({
   hitCount: z.int().nonnegative()
 });
 
+export const CorpusPrepareInputSchema = z.object({
+  apiVersion: z.literal("corpus-prepare/v1"),
+  corpusIds: z.array(IdSchema).default([]),
+  force: z.boolean().default(false)
+});
+
+export const PreparedCorpusSummarySchema = z.object({
+  corpusId: IdSchema,
+  cachePath: z.string().min(1),
+  fileCount: z.int().nonnegative(),
+  chunkCount: z.int().nonnegative()
+});
+
+export const CorpusPrepareResultSchema = z.object({
+  apiVersion: z.literal("corpus-prepare-result/v1"),
+  prepared: z.array(PreparedCorpusSummarySchema).default([])
+});
+
 export const CorpusSearchResultSchema = z.object({
   apiVersion: z.literal("retrieval-result/v1"),
   query: z.string().min(1),
@@ -40,6 +58,9 @@ export const CorpusSearchResultSchema = z.object({
 
 export type CorpusSummary = z.infer<typeof CorpusSummarySchema>;
 export type CorpusCatalog = z.infer<typeof CorpusCatalogSchema>;
+export type CorpusPrepareInput = z.infer<typeof CorpusPrepareInputSchema>;
+export type PreparedCorpusSummary = z.infer<typeof PreparedCorpusSummarySchema>;
+export type CorpusPrepareResult = z.infer<typeof CorpusPrepareResultSchema>;
 export type CorpusSearchInput = z.infer<typeof CorpusSearchInputSchema>;
 export type CorpusSearchStats = z.infer<typeof CorpusSearchStatsSchema>;
 export type CorpusSearchResult = z.infer<typeof CorpusSearchResultSchema>;

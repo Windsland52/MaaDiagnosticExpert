@@ -196,29 +196,30 @@ class McpServer:
     ):
         arguments = arguments or {}
         try:
-            if name == "empty_result":
-                result = self.toolset.empty_result(arguments.get("profile_id"))
-            elif name == "validate_core_result":
-                result = self.toolset.validate_core_result(arguments.get("result"))
+            payload: dict[str, Any] | None = None
+
+            if name == "validate_core_result":
+                payload = arguments.get("result")
             elif name == "render_report":
-                result = self.toolset.render_report(
-                    arguments.get("result"),
-                    format=arguments.get("format", "markdown"),
-                )
-            elif name == "normalize_mla_result":
-                result = self.toolset.normalize_mla_result(
-                    arguments.get("input"),
-                    with_report=bool(arguments.get("with_report", False)),
-                )
-            elif name == "run_mla_runtime":
-                result = self.toolset.run_mla_runtime(
-                    arguments.get("input"),
-                    with_report=bool(arguments.get("with_report", False)),
-                )
-            elif name == "show_builtin_profile":
-                result = self.toolset.show_builtin_profile(arguments.get("profile_id"))
-            else:
-                return self._tool_error_to_mcp(KeyError(f"Unknown tool: {name}"))
+                payload = arguments.get("result")
+            elif name in {
+                "normalize_mla_result",
+                "run_mla_runtime",
+                "normalize_mse_result",
+                "run_mse_runtime",
+                "run_diagnostic_pipeline",
+            }:
+                payload = arguments.get("input")
+            elif name in {"prepare_builtin_corpora", "search_local_corpus"}:
+                payload = arguments
+
+            result = self.toolset.invoke(
+                name,
+                payload=payload,
+                profile_id=arguments.get("profile_id"),
+                format=arguments.get("format", "markdown"),
+                with_report=bool(arguments.get("with_report", False)),
+            )
         except (CoreCliError, KeyError, ValueError, TypeError) as error:
             return self._tool_error_to_mcp(error)
 

@@ -6,14 +6,27 @@ import { z } from "zod";
 import {
   MaaLogAnalyzerBatchInputSchema,
   MaaLogAnalyzerRuntimeInputSchema,
+  MaaSupportExtensionBatchInputSchema,
+  MaaSupportExtensionRuntimeInputSchema,
   normalizeMaaLogAnalyzerResults,
-  normalizeMaaLogAnalyzerRuntimeInput
+  normalizeMaaLogAnalyzerRuntimeInput,
+  normalizeMaaSupportExtensionResults,
+  normalizeMaaSupportExtensionRuntimeInput
 } from "./adapters/index.js";
+import { runDiagnosticPipeline } from "./diagnostic-pipeline.js";
 import { toCoreError } from "./errors.js";
 import { createEmptyCoreResult, parseCoreResult } from "./factories.js";
 import { buildProfileCatalog, buildRuntimeInfo } from "./runtime-info.js";
-import { CorpusSearchInputSchema } from "./models/corpus.js";
-import { buildCorpusCatalog, searchLocalCorpora } from "./retrieval/local.js";
+import {
+  CorpusPrepareInputSchema,
+  CorpusSearchInputSchema
+} from "./models/corpus.js";
+import { DiagnosticPipelineInputSchema } from "./models/diagnostic-pipeline.js";
+import {
+  buildCorpusCatalog,
+  prepareBuiltinCorpora,
+  searchLocalCorpora
+} from "./retrieval/local.js";
 import { buildCoreResultFromAdapterOutput } from "./results.js";
 import { renderCoreErrorJson } from "./renderers/error.js";
 import { renderCoreResultJson } from "./renderers/json.js";
@@ -96,11 +109,15 @@ function printHelp(): string {
     "  render-report [--input <path>] [--format markdown|json] [--output <path>]",
     "  normalize-mla-result [--input <path>] [--with-report] [--output <path>]",
     "  run-mla-runtime [--input <path>] [--with-report] [--output <path>]",
+    "  normalize-mse-result [--input <path>] [--with-report] [--output <path>]",
+    "  run-mse-runtime [--input <path>] [--with-report] [--output <path>]",
     "  validate-profile --input <path> [--output <path>]",
     "  show-builtin-profile --id <id> [--output <path>]",
     "  list-builtin-profiles [--output <path>]",
     "  list-builtin-corpora [--output <path>]",
+    "  prepare-builtin-corpora [--input <path>] [--output <path>]",
     "  search-local-corpus [--input <path>] [--output <path>]",
+    "  run-diagnostic-pipeline [--input <path>] [--with-report] [--output <path>]",
     "  describe-runtime [--output <path>]"
   ].join("\n");
 }
@@ -181,6 +198,34 @@ async function main(): Promise<void> {
       return;
     }
 
+    case "normalize-mse-result": {
+      const inputPath = typeof options.input === "string" ? options.input : undefined;
+      const payload = MaaSupportExtensionBatchInputSchema.parse(await readJsonInput(inputPath));
+      const output = normalizeMaaSupportExtensionResults(payload);
+      const result = buildCoreResultFromAdapterOutput(output, payload.profileId ?? null);
+
+      if (isEnabledOption(options, "with-report")) {
+        result.report = buildMarkdownReport(result);
+      }
+
+      await writeOutput(renderCoreResultJson(result), outputPath);
+      return;
+    }
+
+    case "run-mse-runtime": {
+      const inputPath = typeof options.input === "string" ? options.input : undefined;
+      const payload = MaaSupportExtensionRuntimeInputSchema.parse(await readJsonInput(inputPath));
+      const output = await normalizeMaaSupportExtensionRuntimeInput(payload);
+      const result = buildCoreResultFromAdapterOutput(output, payload.profileId ?? null);
+
+      if (isEnabledOption(options, "with-report")) {
+        result.report = buildMarkdownReport(result);
+      }
+
+      await writeOutput(renderCoreResultJson(result), outputPath);
+      return;
+    }
+
     case "validate-profile": {
       const inputPath = requireStringOption(options, "input");
       const profile = await loadProfileFromFile(inputPath);
@@ -205,11 +250,29 @@ async function main(): Promise<void> {
       return;
     }
 
+    case "prepare-builtin-corpora": {
+      const inputPath = typeof options.input === "string" ? options.input : undefined;
+      const payload = CorpusPrepareInputSchema.parse(await readJsonInput(inputPath));
+      const result = await prepareBuiltinCorpora(payload);
+      await writeOutput(JSON.stringify(result, null, 2), outputPath);
+      return;
+    }
+
     case "search-local-corpus": {
       const inputPath = typeof options.input === "string" ? options.input : undefined;
       const payload = CorpusSearchInputSchema.parse(await readJsonInput(inputPath));
       const result = await searchLocalCorpora(payload);
       await writeOutput(JSON.stringify(result, null, 2), outputPath);
+      return;
+    }
+
+    case "run-diagnostic-pipeline": {
+      const inputPath = typeof options.input === "string" ? options.input : undefined;
+      const payload = DiagnosticPipelineInputSchema.parse(await readJsonInput(inputPath));
+      const result = await runDiagnosticPipeline(payload, {
+        withReport: isEnabledOption(options, "with-report")
+      });
+      await writeOutput(renderCoreResultJson(result), outputPath);
       return;
     }
 

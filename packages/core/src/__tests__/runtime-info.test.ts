@@ -17,6 +17,7 @@ describe("runtime info", () => {
 
     expect(catalog.apiVersion).toBe("corpus-catalog/v1");
     expect(catalog.corpora.length).toBeGreaterThan(0);
+    expect(catalog.corpora.some((corpus) => corpus.id === "maafw-docs")).toBe(true);
     expect(catalog.corpora.some((corpus) => corpus.id === "diagnostic-guides")).toBe(true);
   });
 
@@ -28,13 +29,23 @@ describe("runtime info", () => {
     expect(runtimeInfo.commands).toContain("describe-runtime");
     expect(runtimeInfo.commands).toContain("list-builtin-profiles");
     expect(runtimeInfo.commands).toContain("list-builtin-corpora");
+    expect(runtimeInfo.commands).toContain("prepare-builtin-corpora");
     expect(runtimeInfo.commands).toContain("search-local-corpus");
+    expect(runtimeInfo.commands).toContain("normalize-mse-result");
+    expect(runtimeInfo.commands).toContain("run-mse-runtime");
+    expect(runtimeInfo.commands).toContain("run-diagnostic-pipeline");
     expect(runtimeInfo.adapters).toContain("maa-log-analyzer");
+    expect(runtimeInfo.adapters).toContain("maa-support-extension");
+    expect(runtimeInfo.adapters).toContain("maa-support-extension-runtime");
     expect(runtimeInfo.builtinProfileIds).toContain("generic-maa-log");
+    expect(runtimeInfo.builtinCorpusIds).toContain("maafw-docs");
     expect(runtimeInfo.builtinCorpusIds).toContain("diagnostic-guides");
     expect(runtimeInfo.contracts.some((item) => item.filename === "runtime-info.schema.json")).toBe(true);
     expect(runtimeInfo.contracts.some((item) => item.filename === "profile-catalog.schema.json")).toBe(true);
     expect(runtimeInfo.contracts.some((item) => item.filename === "corpus-catalog.schema.json")).toBe(true);
     expect(runtimeInfo.contracts.some((item) => item.filename === "corpus-search-result.schema.json")).toBe(true);
+    expect(runtimeInfo.contracts.some((item) => item.filename === "corpus-prepare-result.schema.json")).toBe(true);
+    expect(runtimeInfo.contracts.some((item) => item.filename === "maa-support-extension-runtime-input.schema.json")).toBe(true);
+    expect(runtimeInfo.contracts.some((item) => item.filename === "diagnostic-pipeline-input.schema.json")).toBe(true);
   });
 });

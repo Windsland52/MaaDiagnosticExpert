@@ -17,6 +17,7 @@ const genericMaaLogProfileInput = {
     "filesystem"
   ],
   recommendedCorpora: [
+    "maafw-docs",
     "diagnostic-guides",
     "repo-docs",
     "repo-examples"
