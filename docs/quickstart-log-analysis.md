@@ -22,6 +22,29 @@ pnpm build
 
 - 已安装 `uv`
 
+## 参数说明
+
+下面会频繁出现这种写法：
+
+```bash
+pnpm run run:core-cli -- describe-runtime
+```
+
+中间的 `--` 是 `pnpm` 的参数分隔符，不是 `core` CLI 自己的命令参数。
+
+它表示：
+
+- `pnpm` 到这里为止
+- 后面的参数原样交给脚本
+
+如果你改成直接执行底层命令，例如：
+
+```bash
+node packages/core/dist/cli.js describe-runtime
+```
+
+那就不需要这个 `--`。
+
 ## 第零步：先做运行时发现
 
 如果你是从外部 agent、MCP client 或 CI 集成这个项目，建议不要先假定命令、profile 和 contract 已知。

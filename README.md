@@ -145,6 +145,31 @@ pnpm run lock:python-mcp
 pnpm run build:python-mcp
 ```
 
+## 命令行参数转发
+
+文档里的命令经常会写成：
+
+```bash
+pnpm run run:core-cli -- describe-runtime
+pnpm run run:python-mcp-cli -- invoke --tool describe_runtime
+```
+
+这里中间那个 `--` 是给 `pnpm` 用的，不是 `core` 或 `python/mcp` 自己的业务参数。
+
+它的作用是告诉 `pnpm`：
+
+- 后面的内容不要当成 `pnpm` 参数解析
+- 而是原样转发给脚本本身
+
+所以：
+
+- `pnpm run run:core-cli -- describe-runtime`
+  等价于直接执行 `node packages/core/dist/cli.js describe-runtime`
+- `pnpm run run:python-mcp-cli -- invoke --tool describe_runtime`
+  等价于直接执行 `python -m maa_diagnostic_mcp invoke --tool describe_runtime`
+
+如果你直接运行底层命令，而不是通过 `pnpm run`，就不需要这个分隔符。
+
 ## 运行时发现
 
 外部 agent / MCP client 不应该硬编码本项目当前支持的命令、profile 或 contract。

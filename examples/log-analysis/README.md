@@ -7,6 +7,24 @@
 3. 输出 `CoreResult`
 4. 渲染 markdown 报告
 
+## 参数说明
+
+示例里的命令会写成：
+
+```bash
+pnpm run run:core-cli -- run-mla-runtime ...
+```
+
+这里中间的 `--` 是 `pnpm run` 的参数分隔符，用来把后面的参数转发给 `core` CLI。
+
+如果你直接运行：
+
+```bash
+node packages/core/dist/cli.js run-mla-runtime ...
+```
+
+就不需要这个分隔符。
+
 ## 1. 准备输入
 
 复制并修改：
