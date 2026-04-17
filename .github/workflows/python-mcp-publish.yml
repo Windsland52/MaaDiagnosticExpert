@@ -1,0 +1,106 @@
+name: python-mcp-publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      run-id:
+        description: "Build workflow run ID"
+        required: true
+        type: string
+      publish-to:
+        description: "Target package index"
+        required: true
+        type: choice
+        default: "testpypi"
+        options:
+          - "testpypi"
+          - "pypi"
+      artifact-name:
+        description: "Artifact name produced by the build workflow"
+        required: false
+        type: string
+        default: "python-mcp-dist"
+      run-name:
+        description: "Optional custom run name"
+        required: false
+        type: string
+
+run-name: "${{ inputs.run-name || format('Publish python/mcp to {0} from build #{1}', inputs.publish-to, inputs.run-id) }}"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    environment:
+      name: ${{ inputs.publish-to }}
+      url: ${{ inputs.publish-to == 'pypi' && 'https://pypi.org/p/maa-diagnostic-expert-mcp' || 'https://test.pypi.org/p/maa-diagnostic-expert-mcp' }}
+
+    steps:
+      - name: Download built distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.run-id }}
+          github-token: ${{ github.token }}
+          path: dist
+
+      - name: Show downloaded files
+        run: ls -lah dist
+
+      - name: Verify distribution set
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          dist_dir = Path("dist")
+          files = sorted(path.name for path in dist_dir.iterdir() if path.is_file())
+          if not files:
+              raise SystemExit("No distribution files were downloaded.")
+
+          version_pattern = re.compile(r"^maa_diagnostic_expert_mcp-(?P<version>[^-]+)-.*\.whl$")
+          sdist_pattern = re.compile(r"^maa[_-]diagnostic[_-]expert[_-]mcp-(?P<version>.+)\.tar\.gz$")
+
+          wheel_versions = {
+              match.group("version")
+              for file_name in files
+              if (match := version_pattern.match(file_name))
+          }
+          sdist_versions = {
+              match.group("version")
+              for file_name in files
+              if (match := sdist_pattern.match(file_name))
+          }
+
+          if not wheel_versions:
+              raise SystemExit("No wheel file found in dist/.")
+          if not sdist_versions:
+              raise SystemExit("No source distribution found in dist/.")
+
+          versions = wheel_versions | sdist_versions
+          if len(versions) != 1:
+              raise SystemExit(f"Expected exactly one package version, got: {sorted(versions)}")
+
+          version = next(iter(versions))
+          print(f"Publishing maa-diagnostic-expert-mcp version {version}")
+          PY
+
+      - name: Publish Python MCP package to TestPyPI
+        if: ${{ inputs.publish-to == 'testpypi' }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          print-hash: true
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+      - name: Publish Python MCP package to PyPI
+        if: ${{ inputs.publish-to == 'pypi' }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          print-hash: true

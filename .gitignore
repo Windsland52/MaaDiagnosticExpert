@@ -30,6 +30,8 @@ __pycache__/
 .venv/
 .uv-cache/
 .cache/
+python/mcp/src/maa_diagnostic_mcp/_bundled_contracts/
 
 .codex
 sample/
+tmp/

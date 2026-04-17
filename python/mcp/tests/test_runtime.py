@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import shutil
 import sys
 import tempfile
 import unittest
@@ -9,6 +10,7 @@ from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
 from typing import Any, Awaitable, Callable
+from unittest.mock import patch
 
 import anyio
 import mcp.types as mcp_types
@@ -17,6 +19,7 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+import maa_diagnostic_mcp.contracts as contracts_module
 from maa_diagnostic_mcp import (
     CoreCliError,
     CoreCliRuntime,
@@ -200,6 +203,22 @@ class ToolingTests(unittest.TestCase):
             "https://maa-diagnostic-expert/contracts/error.schema.json",
         )
 
+    def test_contract_loader_falls_back_to_bundled_contracts(self) -> None:
+        source_contract_path = Path(__file__).resolve().parents[3] / "contracts" / "error.schema.json"
+
+        with tempfile.TemporaryDirectory(prefix="maa-diagnostic-mcp-contracts-") as temp_dir:
+            bundled_dir = Path(temp_dir)
+            shutil.copy2(source_contract_path, bundled_dir / "error.schema.json")
+
+            with patch.dict(os.environ, {"MAA_DIAGNOSTIC_REPO_ROOT": str(Path.cwd() / "missing-repo-root")}):
+                with patch.object(contracts_module, "resolve_packaged_contracts_dir", return_value=bundled_dir):
+                    contract = load_contract("core_error")
+
+        self.assertEqual(
+            contract["$id"],
+            "https://maa-diagnostic-expert/contracts/error.schema.json",
+        )
+
     def test_tool_specs_include_error_contract(self) -> None:
         toolset = CoreToolset(CoreCliRuntime())
         specs = toolset.list_tool_specs()
@@ -214,6 +233,15 @@ class ToolingTests(unittest.TestCase):
         tool = toolset.list_tool_specs()[0].to_mcp_tool()
         self.assertIsInstance(tool, mcp_types.Tool)
         self.assertEqual(tool.annotations.readOnlyHint, True)
+
+    def test_runtime_requires_explicit_core_path_outside_repo(self) -> None:
+        with patch("maa_diagnostic_mcp.runtime.find_repo_root", return_value=None):
+            runtime = CoreCliRuntime()
+
+        with self.assertRaises(RuntimeError) as context:
+            runtime._base_command()
+
+        self.assertIn("MAA_DIAGNOSTIC_CORE_CLI_JS", str(context.exception))
 
 
 class CliTests(unittest.TestCase):

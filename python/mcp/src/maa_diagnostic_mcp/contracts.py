@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -25,12 +26,50 @@ CONTRACT_FILENAMES = {
 }
 
 
+def find_repo_root() -> Path | None:
+    configured = os.environ.get("MAA_DIAGNOSTIC_REPO_ROOT")
+    if configured:
+        candidate = Path(configured).expanduser().resolve()
+        if candidate.is_dir():
+            return candidate
+
+    for candidate in Path(__file__).resolve().parents:
+        if (candidate / "contracts").is_dir() and (candidate / "package.json").is_file():
+            return candidate
+
+    return None
+
+
 def resolve_repo_root() -> Path:
-    return Path(__file__).resolve().parents[4]
+    repo_root = find_repo_root()
+    if repo_root is None:
+        raise FileNotFoundError(
+            "Could not locate the MaaDiagnosticExpert repository root. "
+            "Set MAA_DIAGNOSTIC_REPO_ROOT, or set MAA_DIAGNOSTIC_CORE_CLI_JS / "
+            "MAA_DIAGNOSTIC_CORE_BIN when running outside the repository."
+        )
+    return repo_root
+
+
+def resolve_packaged_contracts_dir() -> Path:
+    return Path(__file__).resolve().parent / "_bundled_contracts"
 
 
 def resolve_contracts_dir() -> Path:
-    return resolve_repo_root() / "contracts"
+    repo_root = find_repo_root()
+    if repo_root is not None:
+        contracts_dir = repo_root / "contracts"
+        if contracts_dir.is_dir():
+            return contracts_dir
+
+    packaged_contracts_dir = resolve_packaged_contracts_dir()
+    if packaged_contracts_dir.is_dir():
+        return packaged_contracts_dir
+
+    raise FileNotFoundError(
+        "Could not locate contracts/. Expected either the repository contracts "
+        "directory or bundled package contracts."
+    )
 
 
 def get_contract_path(name: str) -> Path:

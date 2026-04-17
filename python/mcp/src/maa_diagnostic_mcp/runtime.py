@@ -7,7 +7,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
-from .contracts import resolve_repo_root
+from .contracts import find_repo_root
 from .errors import build_process_error
 
 
@@ -20,20 +20,30 @@ class CoreCliRuntime:
         core_bin: str | None = None,
         node_bin: str | None = None,
     ) -> None:
-        self.repo_root = repo_root or resolve_repo_root()
-        self.contracts_dir = self.repo_root / "contracts"
-        self.core_cli_path = core_cli_path or Path(
-            os.environ.get(
-                "MAA_DIAGNOSTIC_CORE_CLI_JS",
-                str(self.repo_root / "packages" / "core" / "dist" / "cli.js"),
-            )
-        )
+        self.repo_root = repo_root or find_repo_root()
+        self.contracts_dir = self.repo_root / "contracts" if self.repo_root else None
+        configured_core_cli_path = os.environ.get("MAA_DIAGNOSTIC_CORE_CLI_JS")
+        if core_cli_path is not None:
+            self.core_cli_path = core_cli_path
+        elif configured_core_cli_path:
+            self.core_cli_path = Path(configured_core_cli_path)
+        elif self.repo_root is not None:
+            self.core_cli_path = self.repo_root / "packages" / "core" / "dist" / "cli.js"
+        else:
+            self.core_cli_path = None
         self.core_bin = core_bin or os.environ.get("MAA_DIAGNOSTIC_CORE_BIN")
         self.node_bin = node_bin or os.environ.get("MAA_DIAGNOSTIC_NODE_BIN", "node")
 
     def _base_command(self) -> list[str]:
         if self.core_bin:
             return [self.core_bin]
+
+        if self.core_cli_path is None:
+            raise RuntimeError(
+                "Could not locate packages/core/dist/cli.js. "
+                "Set MAA_DIAGNOSTIC_CORE_CLI_JS or MAA_DIAGNOSTIC_CORE_BIN when "
+                "running the Python MCP package outside the MaaDiagnosticExpert repository."
+            )
 
         return [self.node_bin, str(self.core_cli_path)]
 

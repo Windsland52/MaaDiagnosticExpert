@@ -30,6 +30,10 @@
   - 通过官方 server 生命周期暴露 `tools/list`、`tools/call`
 - `tests/test_runtime.py`
   - 覆盖基础运行链路
+- `src/maa_diagnostic_mcp/_bundled_contracts/*.json`
+  - 构建时生成的 contract 快照
+  - 随 wheel/sdist 分发
+  - 脱离仓库根目录时作为 contract fallback
 
 当前额外暴露的发现型工具：
 
@@ -62,6 +66,9 @@
 - 依赖本机可用的 `node`
 - 依赖已构建好的 `packages/core/dist/cli.js`
 - 依赖官方 `mcp==1.27.0`
+- 如果不在仓库根目录下运行，需要显式设置：
+  - `MAA_DIAGNOSTIC_CORE_CLI_JS=/path/to/packages/core/dist/cli.js`
+  - 或 `MAA_DIAGNOSTIC_CORE_BIN=/path/to/core-binary`
 - 当前对子进程 stdio 互操作仍视为实验态，稳定测试先覆盖官方 session 的进程内链路
 
 ## 开发方式
@@ -73,7 +80,13 @@
 ```bash
 uv lock
 uv run --no-build-isolation python -m unittest discover -s tests -v
+pnpm run sync:python-mcp-contracts
 ```
+
+说明：
+
+- `_bundled_contracts/` 不提交到 git
+- `pnpm run build:python-mcp` 会先自动执行一次 sync，再进行 `uv build`
 
 如果要从仓库根目录执行：
 
@@ -123,13 +136,46 @@ maa-diagnostic-mcp-server
 PYTHONPATH=src uv run --no-project python -m maa_diagnostic_mcp serve-stdio
 ```
 
-后续发布到 PyPI 时，建议直接使用：
+默认发布路径改为 GitHub Actions + PyPI Trusted Publishing。
+
+对应 workflow：
+
+- `.github/workflows/python-mcp-build.yml`
+  - 先生成包内 `_bundled_contracts/`
+  - 负责构建 `packages/core`
+  - 运行 `python/mcp` 单测
+  - 构建 `python/mcp/dist/*`
+  - 上传 `python-mcp-dist` artifact
+- `.github/workflows/python-mcp-publish.yml`
+  - 手动输入一个 build run id
+  - 从该 run 下载 `python-mcp-dist`
+  - 通过 OIDC / Trusted Publishing 上传到 `testpypi` 或 `pypi`
+
+推荐发布步骤：
+
+1. 修改 `python/mcp/pyproject.toml` 中的版本号
+2. 如果 `contracts/` 有变化，先执行 `pnpm contracts` 和 `pnpm run sync:python-mcp-contracts`
+3. 合并到 `main`
+4. 等待 `python-mcp-build` 成功
+5. 在 Actions 页面手动运行 `python-mcp-publish`
+6. `publish-to=testpypi` 先做一次预发布验证
+7. 验证无误后，再用新的 run 或同一个 run 发布到 `pypi`
+
+在 PyPI / TestPyPI 侧需要预先配置 Trusted Publisher，至少要对齐这些字段：
+
+- Owner/Repository: `Windsland52/MaaDiagnosticExpert`
+- Workflow file: `.github/workflows/python-mcp-publish.yml`
+- Environment:
+  - TestPyPI 用 `testpypi`
+  - PyPI 用 `pypi`
+
+本地仍然可以执行：
 
 ```bash
-uv publish
+uv build
 ```
 
-如果走 CI，优先考虑 PyPI Trusted Publishing，不建议长期保管 token。
+`uv publish` 只建议作为人工兜底，不建议作为默认发包路径，也不建议长期保管 API token。
 
 ## 运行测试
 
@@ -147,6 +193,7 @@ uv run python -m unittest discover -s tests -v
 如需覆盖默认 CLI 路径，可设置：
 
 ```bash
+export MAA_DIAGNOSTIC_REPO_ROOT=/path/to/MaaDiagnosticExpert
 export MAA_DIAGNOSTIC_CORE_BIN=/path/to/core-binary
 export MAA_DIAGNOSTIC_CORE_CLI_JS=/path/to/cli.js
 export MAA_DIAGNOSTIC_NODE_BIN=node

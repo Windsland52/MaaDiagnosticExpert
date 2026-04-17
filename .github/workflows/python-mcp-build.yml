@@ -1,0 +1,90 @@
+name: python-mcp-build
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/python-mcp-build.yml"
+      - ".github/workflows/python-mcp-publish.yml"
+      - "contracts/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "packages/core/**"
+      - "python/mcp/**"
+  push:
+    branches:
+      - "main"
+    tags:
+      - "python-mcp-v*"
+    paths:
+      - ".github/workflows/python-mcp-build.yml"
+      - ".github/workflows/python-mcp-publish.yml"
+      - "contracts/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "packages/core/**"
+      - "python/mcp/**"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            python/mcp/uv.lock
+
+      - name: Install Node.js dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate contracts for Python MCP packaging
+        run: |
+          pnpm contracts
+          pnpm run sync:python-mcp-contracts
+
+      - name: Build core runtime
+        run: pnpm build
+
+      - name: Run Python MCP tests
+        run: pnpm run test:python-mcp
+
+      - name: Build Python MCP distributions
+        run: |
+          rm -rf python/mcp/dist/*
+          pnpm run build:python-mcp
+
+      - name: Upload Python MCP distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-mcp-dist
+          path: python/mcp/dist/*
+          if-no-files-found: error
+          retention-days: 14
