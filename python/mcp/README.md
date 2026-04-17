@@ -79,6 +79,7 @@
 
 ```bash
 uv lock
+uv sync --directory python/mcp --frozen
 uv run --no-build-isolation python -m unittest discover -s tests -v
 pnpm run sync:python-mcp-contracts
 ```
@@ -99,6 +100,13 @@ uv run --directory python/mcp --no-build-isolation python -m unittest discover -
 ```bash
 uv run --no-project python -m unittest discover -s tests -v
 ```
+
+前提：
+
+- `--no-project` 模式不会自动安装 `python/mcp` 的依赖
+- 先执行一次 `uv sync --directory python/mcp --frozen --no-install-project`
+- 仓库根脚本 `pnpm run test:python-mcp`、`pnpm run run:python-mcp-cli`、`pnpm run run:python-mcp-server`
+  已经会先自动执行这一步
 
 如果在仓库内直接调包内 CLI，也需要显式把 `src` 放进 `PYTHONPATH`：
 
