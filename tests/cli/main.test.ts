@@ -64,6 +64,21 @@ test("rejects mistyped options instead of silently treating them as positional a
   expect(errorOutput).not.toContain("ENOENT");
 });
 
+test("suggests the closest option when an unknown flag is supplied", async () => {
+  let errorOutput = "";
+  vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+    errorOutput += String(chunk);
+    return true;
+  });
+
+  await expect(main(["mla", "inspect", ".", "--json"])).resolves.toBe(1);
+  expect(errorOutput).toContain("Unknown option: --json. Did you mean --format json?");
+
+  errorOutput = "";
+  await expect(main(["search", "--input", "missing.json", "--nodes", "Target"])).resolves.toBe(1);
+  expect(errorOutput).toContain("Unknown option: --nodes. Did you mean --node?");
+});
+
 test("emits a bounded inspection summary instead of the full document", async () => {
   const root = await mlaFixture();
   const summaryPath = path.join(root, "summary.json");
