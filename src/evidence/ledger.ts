@@ -23,6 +23,62 @@ function evidenceKey<T>(draft: EvidenceDraft<T>): string {
   });
 }
 
+export type CrossArtifactDuplicateObservations = {
+  observationGroups: number;
+  duplicateRecords: number;
+  artifactIds: string[];
+};
+
+function observationFingerprint(evidence: Evidence): string {
+  return canonicalJson([
+    evidence.kind,
+    evidence.summary,
+    evidence.source.task ?? null,
+    evidence.source.node ?? null,
+  ]);
+}
+
+/**
+ * Count evidence records that describe the same observation in more than one artifact. Mirrored
+ * MaaFramework logs (a launcher copy plus an agent copy) report the same runtime events, and each
+ * copy earns its own evidence ID because provenance differs. The records stay unmerged; this only
+ * makes the repetition explicit so a harness does not read one event as two.
+ *
+ * The fingerprint is kind, summary, task, and node. Timestamps are deliberately excluded: mirrored
+ * processes flush independently, and on real material only 99 of 131 mirrored groups agreed on the
+ * timestamp, so including it would have hidden about a quarter of the duplication. The tradeoff is
+ * that two genuinely distinct events sharing all four fields collapse into one group, which
+ * understates `observationGroups`. This is a fingerprint match, not proof of identity, and the
+ * group count is a lower bound on distinct observations.
+ */
+export function findCrossArtifactDuplicateObservations(
+  evidence: readonly Evidence[],
+): CrossArtifactDuplicateObservations {
+  const groups = new Map<string, Set<string>>();
+  const counts = new Map<string, number>();
+  for (const item of evidence) {
+    const fingerprint = observationFingerprint(item);
+    const artifacts = groups.get(fingerprint) ?? new Set<string>();
+    artifacts.add(item.source.artifactId);
+    groups.set(fingerprint, artifacts);
+    counts.set(fingerprint, (counts.get(fingerprint) ?? 0) + 1);
+  }
+  const artifactIds = new Set<string>();
+  let observationGroups = 0;
+  let duplicateRecords = 0;
+  for (const [fingerprint, artifacts] of groups) {
+    if (artifacts.size < 2) continue;
+    observationGroups += 1;
+    duplicateRecords += (counts.get(fingerprint) ?? 0);
+    for (const id of artifacts) artifactIds.add(id);
+  }
+  return {
+    observationGroups,
+    duplicateRecords,
+    artifactIds: [...artifactIds].sort((left, right) => left.localeCompare(right)),
+  };
+}
+
 export function artifactId(relativePath: string): string {
   const digest = createHash("sha256")
     .update(relativePath.replaceAll("\\", "/").normalize("NFC"))

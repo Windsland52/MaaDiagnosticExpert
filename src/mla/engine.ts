@@ -16,6 +16,7 @@ import {
   EVIDENCE_SCHEMA_VERSION,
   EvidenceLedger,
   artifactId,
+  findCrossArtifactDuplicateObservations,
   parseTimestamp,
   portablePath,
   type Artifact,
@@ -2445,6 +2446,7 @@ export async function inspectMla(
     addTaskAnomalyEvidence(ledger, anomaly, task, discovery.artifacts, resolvedPath);
   }
   const evidence = correlateCycleBlockers(ledger.values());
+  const duplicateObservations = findCrossArtifactDuplicateObservations(evidence);
   const selectedArtifactIds = new Set(evidence.map((item) => item.source.artifactId));
   for (const loaded of loadedTargets) {
     for (const segment of loaded.sourceSegments) {
@@ -2544,6 +2546,12 @@ export async function inspectMla(
         code: "mla_pipeline_override_parse_incomplete",
         message: `${pipelineOverrideMalformedLines} MaaFramework override log lines could not be parsed as complete JSON; runtime override evidence is incomplete.`,
       }]),
+    ...(duplicateObservations.observationGroups === 0
+      ? []
+      : [{
+        code: "mla_cross_artifact_duplicate_observations",
+        message: `${duplicateObservations.duplicateRecords} evidence records share a kind/summary/task/node fingerprint with a record in another artifact, forming ${duplicateObservations.observationGroups} repeated observation ${duplicateObservations.observationGroups === 1 ? "group" : "groups"} across ${duplicateObservations.artifactIds.length} artifacts (${duplicateObservations.artifactIds.join(", ")}). Timestamps are not part of the fingerprint, so the group count is a lower bound on distinct observations. Mirrored logs keep separate provenance and records remain unmerged; filter with a single --artifact-id before counting an event.`,
+      }]),
   ];
   return {
     schemaVersion: EVIDENCE_SCHEMA_VERSION,
@@ -2576,6 +2584,7 @@ export async function inspectMla(
       actionDetailsTotal: loadedTargets.reduce((total, target) => total + target.actionDetailsTotal, 0),
       pipelineOverrides: pipelineOverridesSelected,
       pipelineOverridesTotal,
+      crossArtifactDuplicateObservations: duplicateObservations.observationGroups,
       repeatedNodeSegments: completeSignalCounts.repeatedNodeSegments,
       repeatedNodeSegmentsFocused: focusedSignalCounts.repeatedNodeSegments,
       repeatedNodeTotalRepeatCount: completeSignalCounts.repeatedNodeTotalRepeatCount,

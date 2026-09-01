@@ -1,4 +1,9 @@
-export { EvidenceLedger, artifactId } from "./ledger.js";
+export {
+  EvidenceLedger,
+  artifactId,
+  findCrossArtifactDuplicateObservations,
+  type CrossArtifactDuplicateObservations,
+} from "./ledger.js";
 export {
   EVIDENCE_BATCH_SCHEMA_VERSION,
   MAX_EVIDENCE_BATCH_REQUESTS,

@@ -8,6 +8,7 @@ import {
   EVIDENCE_SCHEMA_VERSION,
   EvidenceLedger,
   artifactId,
+  findCrossArtifactDuplicateObservations,
   queryEvidenceWindow,
   type InspectionResult,
 } from "../../src/index.js";
@@ -32,6 +33,32 @@ describe("evidence ledger", () => {
     expect(first.values()).toHaveLength(1);
     expect(artifactId("debug\\maafw.log")).toBe(artifactId("debug/maafw.log"));
     expect(artifactId("logs/MAA.log")).not.toBe(artifactId("logs/maa.log"));
+  });
+
+  test("reports identical observations repeated across mirrored artifacts", () => {
+    const observation = (id: string, artifact: string, summary: string) => ({
+      id,
+      kind: "mla.action_detail",
+      summary,
+      source: { artifactId: artifact, path: "maafw.log", line: 1, node: "EatCandyStart" },
+      data: {},
+    });
+    const duplicates = findCrossArtifactDuplicateObservations([
+      observation("evidence-a", "artifact-launcher", "Action EatCandyStart succeeded (Click) x2."),
+      observation("evidence-b", "artifact-agent", "Action EatCandyStart succeeded (Click) x2."),
+      observation("evidence-c", "artifact-launcher", "Action EatCandyStart succeeded (Click) x1."),
+    ]);
+
+    expect(duplicates.observationGroups).toBe(1);
+    expect(duplicates.duplicateRecords).toBe(2);
+    expect(duplicates.artifactIds).toEqual(["artifact-agent", "artifact-launcher"]);
+
+    const single = findCrossArtifactDuplicateObservations([
+      observation("evidence-a", "artifact-launcher", "Action EatCandyStart succeeded (Click) x2."),
+      observation("evidence-c", "artifact-launcher", "Action EatCandyStart succeeded (Click) x1."),
+    ]);
+    expect(single.observationGroups).toBe(0);
+    expect(single.artifactIds).toEqual([]);
   });
 
   test("reads a bounded source window only from an inventoried artifact", async () => {
