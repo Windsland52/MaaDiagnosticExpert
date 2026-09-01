@@ -22,6 +22,7 @@ import {
   evidenceById,
   renderEvidence,
   renderEvidenceSearch,
+  renderInspectionSummary,
   resolveMse,
   searchEvidence,
   setTelemetryEnabled,
@@ -43,11 +44,11 @@ import { withLocalProfile } from "./profile.js";
 const HELP = `MaaEvidenceKit — deterministic MaaFramework evidence extraction
 
 Usage:
-  maa-evidence mla inspect <path> [--from ISO] [--to ISO] [--keyword TEXT] [--all-signals] [--format json|text|mermaid]
-  maa-evidence mse inspect <path> [--task NAME] [--depth N] [--controller NAME] [--resource NAME] [--no-referencers] [--syntax-mode maafw|maa] [--format json|text|mermaid]
-  maa-evidence mse resolve <path> --task NAME [--depth N] [--controller NAME] [--resource NAME] [--no-referencers] [--syntax-mode maafw|maa] [--format json|text|mermaid]
-  maa-evidence repo-docs <checkout> [--format json|text]
-  maa-evidence inspect <path> [--from ISO] [--to ISO] [--task NAME] [--controller NAME] [--resource NAME] [--referencers|--no-referencers] [--no-mla] [--no-mse]
+  maa-evidence mla inspect <path> [--from ISO] [--to ISO] [--keyword TEXT] [--all-signals] [--summary] [--format json|text|mermaid]
+  maa-evidence mse inspect <path> [--task NAME] [--depth N] [--controller NAME] [--resource NAME] [--no-referencers] [--syntax-mode maafw|maa] [--summary] [--format json|text|mermaid]
+  maa-evidence mse resolve <path> --task NAME [--depth N] [--controller NAME] [--resource NAME] [--no-referencers] [--syntax-mode maafw|maa] [--summary] [--format json|text|mermaid]
+  maa-evidence repo-docs <checkout> [--summary] [--format json|text]
+  maa-evidence inspect <path> [--from ISO] [--to ISO] [--task NAME] [--controller NAME] [--resource NAME] [--referencers|--no-referencers] [--no-mla] [--no-mse] [--summary]
   maa-evidence window --input result.json (--evidence-id ID | --artifact-id ID) [--line N]
   maa-evidence view --input result.json [--evidence-id ID] --format json|text|mermaid
   maa-evidence search --input result.json [--artifact-id ID] [--kind KIND] [--node NODE] [--task TASK] [--text TEXT] [--from ISO] [--to ISO] [--limit N] [--format json|text]
@@ -58,9 +59,14 @@ Usage:
 Common options:
   --output FILE       Write output to a file
   --format FORMAT     json, text, or mermaid
+  --summary           Emit only artifacts, statistics, warnings, and evidence kinds
+                      (every inspection command; json or text)
   --profile FILE      Write local stage timings as JSON
   --version           Show the MaaEvidenceKit version
   -h, --help          Show this help
+
+A full inspection is dominated by its evidence ledger and details payload. Start with --summary, or
+narrow the window with --from/--to, before reading or piping a complete result.
 `;
 
 function requirePositional(parsed: ParsedArguments, index: number, label: string): string {
@@ -109,7 +115,14 @@ function outputFormat(parsed: ParsedArguments): ViewFormat {
 }
 
 async function emitInspection(result: InspectionResult, parsed: ParsedArguments): Promise<void> {
-  const rendered = profileStageSync("render", () => view(result, { format: outputFormat(parsed) }));
+  const format = outputFormat(parsed);
+  if (flag(parsed, "--summary")) {
+    if (format === "mermaid") throw new Error("--summary supports --format json or text.");
+    const summary = profileStageSync("render", () => renderInspectionSummary(result, format));
+    await emit(summary, option(parsed, "--output"));
+    return;
+  }
+  const rendered = profileStageSync("render", () => view(result, { format }));
   await emit(rendered, option(parsed, "--output"));
 }
 

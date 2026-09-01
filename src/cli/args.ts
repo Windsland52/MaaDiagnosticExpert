@@ -41,6 +41,7 @@ const BOOLEAN_OPTIONS = new Set([
   "--no-mla",
   "--no-mse",
   "--no-referencers",
+  "--summary",
   "--version",
 ]);
 

@@ -26,5 +26,13 @@ export { evidenceById, renderEvidence, type EvidenceViewFormat } from "./evidenc
 export { renderJson } from "./json.js";
 export { renderMermaid } from "./mermaid.js";
 export { renderEvidenceSearch, type EvidenceSearchFormat } from "./search.js";
+export {
+  INSPECTION_SUMMARY_SCHEMA_VERSION,
+  renderInspectionSummary,
+  summarizeInspection,
+  type InspectionEvidenceKindCount,
+  type InspectionSummary,
+  type SummaryFormat,
+} from "./summary.js";
 export { renderText } from "./text.js";
 export { renderEvidenceWindow, type EvidenceWindowFormat } from "./window.js";
