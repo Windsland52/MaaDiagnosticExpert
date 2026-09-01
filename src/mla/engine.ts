@@ -568,6 +568,8 @@ function addPipelineOverrideEvidence(
       taskName: observation.taskName,
       contextScopeId: observation.contextScopeId,
       nodeNames: observation.nodeNames,
+      patchPaths: observation.patchPaths,
+      patchPathsTruncated: observation.patchPathsTruncated,
       patches: observation.patches,
     },
   );

@@ -105,7 +105,10 @@ action-detail 组超过 500 时会按时间轴均匀取样,并输出 `mla_action
 MLA 会从 MaaFramework 核心日志中提取非空 `pipeline_override` JSON，按日志出现顺序输出
 `mla.pipeline_override` evidence。`patches` 保留 object 或 object array 的原始覆盖顺序，
 `nodeNames` 给出本次覆盖涉及的节点；`origin` 区分资源覆盖、任务提交、任务更新和 Context
-动态覆盖。内存地址不会直接输出，而是按当前日志内首次出现顺序归一化为
+动态覆盖。`patchPaths` 把每一处被覆盖的字段摊平成 `节点.字段.子字段` 形式的去重有序列表，
+用于按字段名检索——覆盖载荷的语义在 object key 上，而 evidence 文本检索按设计不匹配字段名。
+路径最多 200 条、深度最多 8 层；只有确实有路径被丢弃时 `patchPathsTruncated` 才为 true，
+恰好 200 条而没有溢出时仍为 false。内存地址不会直接输出，而是按当前日志内首次出现顺序归一化为
 `contextScopeId`。同一输入同时出现在 API/Tasker 层和 Context 核心层时优先保留 Context
 来源并去重；若 Context trace 不可见，仍保留可解析的任务或 API 输入，但不会补造其缺失的
 Context/task 关联。

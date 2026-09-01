@@ -38,6 +38,8 @@ export type MlaPipelineOverrideObservation = {
   taskName: string | null;
   contextScopeId: string | null;
   nodeNames: string[];
+  patchPaths: string[];
+  patchPathsTruncated: boolean;
   patches: JsonRecord[];
   timestamp: string;
   mergedLine: number;
@@ -191,6 +193,45 @@ function nodeNames(patches: readonly JsonRecord[]): string[] {
   );
 }
 
+const MAX_PATCH_PATHS = 200;
+const MAX_PATCH_PATH_DEPTH = 8;
+
+type PatchPathCollection = {
+  paths: Set<string>;
+  truncated: boolean;
+};
+
+function collectPatchPaths(value: unknown, prefix: string, depth: number, output: PatchPathCollection): void {
+  if (!isRecord(value) || depth >= MAX_PATCH_PATH_DEPTH || Object.keys(value).length === 0) {
+    if (prefix.length === 0) return;
+    if (output.paths.size >= MAX_PATCH_PATHS && !output.paths.has(prefix)) {
+      output.truncated = true;
+      return;
+    }
+    output.paths.add(prefix);
+    return;
+  }
+  for (const key of Object.keys(value)) {
+    collectPatchPaths(value[key], prefix.length === 0 ? key : `${prefix}.${key}`, depth + 1, output);
+  }
+}
+
+/**
+ * Flatten every overridden field into a dotted `Node.field.subfield` path. Override payloads carry
+ * their meaning in object keys, which evidence text search deliberately does not index, so the paths
+ * are exported as ordinary string values instead.
+ */
+function patchPathFields(
+  patches: readonly JsonRecord[],
+): { patchPaths: string[]; patchPathsTruncated: boolean } {
+  const output: PatchPathCollection = { paths: new Set<string>(), truncated: false };
+  for (const patch of patches) collectPatchPaths(patch, "", 0, output);
+  return {
+    patchPaths: [...output.paths].sort((left, right) => left.localeCompare(right)),
+    patchPathsTruncated: output.truncated,
+  };
+}
+
 export function extractPipelineOverrides(
   content: string,
   timeRange?: TimeRange,
@@ -287,6 +328,7 @@ export function extractPipelineOverrides(
       taskName: null,
       contextScopeId: null,
       nodeNames: nodeNames(resource.patches),
+      ...patchPathFields(resource.patches),
       patches: resource.patches,
       timestamp: resource.timestamp,
       mergedLine: resource.mergedLine,
@@ -318,6 +360,7 @@ export function extractPipelineOverrides(
       taskName,
       contextScopeId: contextOrdinals.get(context.contextId) ?? null,
       nodeNames: nodeNames(context.patches),
+      ...patchPathFields(context.patches),
       patches: context.patches,
       timestamp: context.timestamp,
       mergedLine: context.mergedLine,
@@ -337,6 +380,7 @@ export function extractPipelineOverrides(
       taskName,
       contextScopeId: null,
       nodeNames: nodeNames(origin.patches),
+      ...patchPathFields(origin.patches),
       patches: origin.patches,
       timestamp: origin.timestamp,
       mergedLine: origin.mergedLine,
@@ -356,6 +400,7 @@ export function extractPipelineOverrides(
       taskName: null,
       contextScopeId: null,
       nodeNames: nodeNames(contextApiInput.patches),
+      ...patchPathFields(contextApiInput.patches),
       patches: contextApiInput.patches,
       timestamp: contextApiInput.timestamp,
       mergedLine: contextApiInput.mergedLine,

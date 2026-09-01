@@ -169,6 +169,8 @@ test("extracts ordered pipeline overrides and maps a context to its task", async
       taskName: "Combat",
       contextScopeId: "context-1",
       nodeNames: ["Target"],
+      patchPaths: ["Target.enabled"],
+      patchPathsTruncated: false,
       patches: [{ Target: { enabled: false } }],
     },
   });
@@ -181,6 +183,8 @@ test("extracts ordered pipeline overrides and maps a context to its task", async
       taskName: "Combat",
       contextScopeId: "context-1",
       nodeNames: ["Target"],
+      patchPaths: ["Target.attach.clicks"],
+      patchPathsTruncated: false,
       patches: [{ Target: { attach: { clicks: [[10, 20], [30, 40]] } } }],
     },
   });
