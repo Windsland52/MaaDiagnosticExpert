@@ -35,6 +35,21 @@ sentry explore <org>/<project> `
 With Sentry MCP, use the equivalent structured project, issue-search, aggregate, and event-detail
 tools. Use only fields actually present in the project.
 
+Verify an aggregate before you rank or quantify with it. Behavior observed with the TypeScript
+`sentry` CLI 0.40.0 that silently corrupts triage:
+
+- `issue list --query 'release:"X"'` selects which groups are returned, but `count`/`userCount` can
+  still be period-wide totals across every release. Confirm any release-scoped number with a scalar
+  `count()` query carrying the same filter before reporting it.
+- Multi-dimension `explore` aggregates on `errors` may return duplicate rows and a sum that does not
+  reconcile with the scalar `count()` for the same filter, while still reporting `hasMore: false`.
+  Reconcile the sum, deduplicate, and re-query any single row you intend to cite.
+- `--sort` is ignored on the `errors` dataset, so an `explore` result is an arbitrary N rows, not a
+  top N. Pull the full set and rank locally, or order through the events endpoint.
+- In PowerShell, quote any argument containing a comma (`--fields 'id,shortId'`). An unquoted comma
+  is parsed as an array and reaches the CLI as separate arguments, which returns empty objects
+  instead of an error.
+
 ## Release-scoped triage
 
 When the question is "what is broken in release X", scope by release when supported and rank by
@@ -51,8 +66,53 @@ sentry issue list <org>/<project> --period 30d `
 - Enumerate relevant title variants before summing a task or failure family. Preserve the original
   groups even when the host infers that several belong to one family.
 - A common phase or node across unrelated tasks is a clue for shared behavior, not causal proof.
-- Counts are absolute, not rates. Without a denominator per release, report counts and observation
-  windows rather than an occurrence rate.
+- One application version can appear under several release strings when the release identifier
+  embeds a separate GUI or shell version. Enumerate every release string containing the version
+  before summing, and do not add per-release unique-user counts together.
+- Counts are absolute, not rates. Obtain a denominator before comparing releases: release health
+  reports sessions per release, which normalizes different adoption levels.
+
+  ```powershell
+  sentry api "/organizations/<org>/sessions/?field=sum(session)&groupBy=release&statsPeriod=14d&project=<id>" --json
+  ```
+
+  Report events per 1000 sessions next to the raw counts, and state the observation window. A newer
+  release has been available for fewer days, so equal counts are not equal rates. Without a
+  denominator, report counts and windows rather than an occurrence rate.
+
+## Separate telemetry-schema changes from real regressions
+
+A client that changes how it reports failures moves counts between groups and tags without any
+change in application behavior. Group fragmentation from a new title format is the visible half;
+tag-coverage changes are the half that silently invents regressions.
+
+Before attributing a per-node, per-tag, or per-group increase to the release under test:
+
+1. Compare the missing-tag share across both releases, for example `release:"A" !has:<tag>` against
+   `release:"B" !has:<tag>`. A drop in the missing share means previously unattributed events were
+   relabeled, not that new failures appeared.
+2. Prefer the coarsest stable unit — task-level or release-level totals — as the primary metric. Use
+   per-node numbers only once tag coverage is comparable.
+3. Treat a uniform multiplier across many unrelated units as a labeling artifact until shown
+   otherwise. A real defect concentrates; a reporting change spreads evenly.
+4. Check whether the compared releases carry different client versions. When the client differs, an
+   apparent application regression may belong to the client.
+
+Record the coverage figures in the report so a reader can re-derive the correction.
+
+## Correlate a release regression with the application's own history
+
+Population evidence identifies which release changed; it does not identify what changed. Close that
+loop against the application repository at its issue-time refs, never against current `HEAD`:
+
+1. Map the release string to the repository tag it embeds.
+2. Diff those tags and read the commit subjects between them.
+3. Separate no-op changes from behavioral ones. Localization, formatting, and metadata commits can
+   dominate a diff while touching no execution path.
+4. Keep only the behavioral changes intersecting the failing task, node, or custom action as
+   suspected triggers. A diff that touches the failing path is correlation, not proof.
+
+State explicitly when issue-time source is unavailable instead of substituting current source.
 
 ## Keep Sentry groups and inferred signature families distinct
 
@@ -79,6 +139,12 @@ sentry event list <org>/<short-issue-id> --period 7d --limit 50 --fresh --json
 sentry event view <org>/<project> <event-id> --fresh --json
 ```
 
+Aggregates rarely carry the application's own configuration. A project may attach selected task
+options, failure messages, durations, and attachment status to an event's custom context rather than
+to tags, which makes them visible on a single event but not queryable in aggregate. When a
+hypothesis depends on configuration, sample several events from the same group, tally that context
+explicitly, and report it as a sample rather than a population fact.
+
 An empty Sentry window does not disprove a Maa task problem. Handled recognition loops, bad routes,
 or incorrect business outcomes may never produce Sentry error events. Establish which datasets and
 event types the project actually ingests.
@@ -87,6 +153,11 @@ event types the project actually ingests.
 
 - Treat a missing attachment as an evidence gap. Attribute it to quota, retention, SDK settings,
   permissions, or upload failure only when project evidence establishes that cause.
+- Attachments are not listed by the aggregate views. Enumerate them per event with
+  `sentry api "/projects/<org>/<project>/events/<event-id>/attachments/"`, then fetch one with the
+  same path plus `?download=1`. Redirect through a byte-safe shell: PowerShell's `>` re-encodes the
+  stream and corrupts the file, while `cmd /c ... > file` preserves it. Verify the written size and
+  magic bytes against the API-reported size before treating the file as evidence.
 - Do not infer raw OCR candidates from a summary message. When MEK exported
   `mla.recognition_detail`, first use `data.candidateStages.all/filtered/best`: they preserve bounded
   candidate text, score, box, stage distributions, truncation, and source locators when the upstream

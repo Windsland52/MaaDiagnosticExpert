@@ -34,6 +34,10 @@ Choose the smallest operation that answers the question:
   than asking MEK to interpret it.
 - Sentry: use the external CLI/MCP only after reading
   [references/sentry.md](references/sentry.md).
+- Release or version health ("how is the latest version doing"): a population-first question rather
+  than an Issue investigation. Start from Sentry aggregates with a per-release denominator, then
+  correlate with the application's own version history. MLA and MSE apply only once one specific run
+  is in scope.
 
 Do not run MSE, Sentry, exhaustive signals, or source research merely because the tool exists.
 

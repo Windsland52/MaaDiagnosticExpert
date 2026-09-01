@@ -7,6 +7,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Extend the host-agent Skill's Sentry reference with release-health triage: obtain a per-release
+  session denominator before comparing versions, separate telemetry-schema and tag-coverage changes
+  from real regressions, correlate a suspected regression with the application's own issue-time tag
+  history, sample custom event context instead of assuming it is queryable, and verify Sentry CLI
+  aggregates before ranking or quantifying with them.
+- Route release or version health questions in the Skill entry point to the population-first Sentry
+  path instead of the Issue-driven MLA/MSE path.
+
 ## [0.3.2] - 2026-08-12
 
 ### Added
