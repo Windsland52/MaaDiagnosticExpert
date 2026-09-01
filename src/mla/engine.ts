@@ -27,7 +27,7 @@ import {
   type TimeRange,
 } from "../evidence/index.js";
 import { profileStage, profileStageSync } from "../profiling.js";
-import { discoverArtifacts } from "./discovery.js";
+import { MAX_DIRECTORY_ENTRIES, discoverArtifacts, measureDirectoryEntries } from "./discovery.js";
 import {
   extractPipelineOverrides,
   type MlaPipelineOverrideObservation,
@@ -2239,6 +2239,14 @@ async function loadMlaTarget(
   timeRange: TimeRange | undefined,
   imageMaps: MlaImageMaps | undefined,
 ): Promise<LoadedMlaTarget | null> {
+  if (target.kind === "directory") {
+    const budget = await measureDirectoryEntries(target.path);
+    if (budget.exceeded) {
+      throw new Error(
+        `it holds more than ${MAX_DIRECTORY_ENTRIES} files, above the entry limit applied before a combined directory read`,
+      );
+    }
+  }
   const framework = extractFrameworkSessions(await loadFrameworkLogSources(target.path));
   let sourceSegments: SourceSegment[];
   let content: string;

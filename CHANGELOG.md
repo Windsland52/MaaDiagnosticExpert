@@ -7,6 +7,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Bound how many files a directory target may contribute before it is handed to the upstream
+  directory loader. `@windsland52/maa-log-tools` 2.0.0 removed its own entry-count limit, so an
+  oversized directory now fails that single target with an explicit reason and falls back to the
+  individually discovered log files, instead of walking the directory unbounded.
+
 ### Changed
 
 - Update `@windsland52/maa-log-tools` to 2.0.0. That release removes `ArchiveLimits.maxEntries` and

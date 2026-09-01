@@ -1,10 +1,11 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, expect, test } from "vitest";
 
 import { discoverArtifacts } from "../../src/index.js";
+import { measureDirectoryEntries } from "../../src/mla/discovery.js";
 
 const temporaryRoots: string[] = [];
 
@@ -60,4 +61,16 @@ test("reports the scanned-file bound instead of relying on an upstream entry-cou
   expect(discovery.scannedFileCount).toBe(3);
   expect(discovery.omittedOtherFileCount).toBe(0);
   expect(discovery.warnings.map((warning) => warning.code)).not.toContain("artifact_scan_truncated");
+});
+
+test("bounds how many files a directory may contribute before a combined directory read", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "mek-directory-budget-"));
+  temporaryRoots.push(root);
+  await mkdir(path.join(root, "nested"), { recursive: true });
+  await writeFile(path.join(root, "a.txt"), "a", "utf8");
+  await writeFile(path.join(root, "b.txt"), "b", "utf8");
+  await writeFile(path.join(root, "nested", "c.txt"), "c", "utf8");
+
+  await expect(measureDirectoryEntries(root, 3)).resolves.toEqual({ countedFiles: 3, exceeded: false });
+  await expect(measureDirectoryEntries(root, 2)).resolves.toEqual({ countedFiles: 3, exceeded: true });
 });

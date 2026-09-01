@@ -7,6 +7,7 @@ import type { Artifact, InspectionWarning, MissingEvidence } from "../evidence/i
 const SAMPLE_BYTES = 64 * 1024;
 const MAX_SCANNED_FILES = 10_000;
 const MAX_REPORTED_OTHER_FILES = 200;
+export const MAX_DIRECTORY_ENTRIES = 10_000;
 const IGNORED_DIRECTORIES = new Set([
   ".git",
   ".hg",
@@ -22,6 +23,11 @@ const MAA_LINE =
 const NUMBERED_ARCHIVE = /^(.*?part)(\d+)(?:[._-]?of[._-]?(\d+))?(\.(?:zip|7z|rar|tar(?:\.gz)?|tgz))$/i;
 const SPLIT_ARCHIVE = /^(.*)\.(z|r)(\d{2,})$/i;
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+export type DirectoryEntryBudget = {
+  countedFiles: number;
+  exceeded: boolean;
+};
 
 export type ArtifactDiscovery = {
   root: string;
@@ -126,6 +132,37 @@ async function collectFiles(root: string): Promise<{ files: string[]; truncated:
     }
   }
   return { files: files.sort((left, right) => left.localeCompare(right)), truncated };
+}
+
+/**
+ * Bound how many files a directory may contribute before it is handed to the upstream directory
+ * loader. `@windsland52/maa-log-tools` 2.0.0 removed its own entry-count limit, so this walk is the
+ * only entry-count guard left on that path. It stops as soon as the limit is passed and therefore
+ * never enumerates more than `limit + 1` files. Unlike artifact discovery it ignores no directory,
+ * because the bound must reflect the whole traversal the loader would perform.
+ */
+export async function measureDirectoryEntries(
+  root: string,
+  limit: number = MAX_DIRECTORY_ENTRIES,
+): Promise<DirectoryEntryBudget> {
+  const queue = [root];
+  let countedFiles = 0;
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (current === undefined) break;
+    const directory = await opendir(current);
+    for await (const entry of directory) {
+      if (entry.isSymbolicLink()) continue;
+      if (entry.isDirectory()) {
+        queue.push(path.join(current, entry.name));
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      countedFiles += 1;
+      if (countedFiles > limit) return { countedFiles, exceeded: true };
+    }
+  }
+  return { countedFiles, exceeded: false };
 }
 
 function findMissingArchiveParts(artifacts: readonly Artifact[]): MissingEvidence[] {
