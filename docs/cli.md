@@ -159,6 +159,26 @@ MSE 未提供 `--task` 时只执行 Interface、资源组合和静态诊断预�
 `mla_directory_fallback_used` 会保留“跨文件聚合可能不完整”的警告,逐文件失败则单独保留为
 `mla_target_unreadable` missing evidence。目录失败不会再为同一个不可读文件重复生成缺失记录。
 
+## 先看摘要,再取证据
+
+完整 inspection 的体积由 evidence 账本和 `details` 主导,直接打到 stdout 往往会被上游按尾部
+截断,反而丢掉 `artifacts` / `warnings` / `statistics` 这些必看字段。
+
+```powershell
+# 只输出 artifacts、missingEvidence、warnings、statistics 和各 evidence kind 的数量
+maa-evidence mla inspect C:\path\to\materials --summary --format text
+
+# 完整结果落盘,再用 search / view / window 钻取
+maa-evidence mla inspect C:\path\to\materials --format json --output inspection.json
+```
+
+`--summary` 输出独立的 `maa-evidence-summary/v1` 文档(不含 `evidence` 与 `details`),
+其中 `evidenceKinds` 直接给出可用的 `--kind` 取值及数量,便于规划后续 `search`。
+该文档不是 inspection 结果,不能作为 `--input` 回传。
+
+已知事发时间时先用 `--from` / `--to` 收窄窗口:实测一份 16 MB 的产物在收窄到十分钟窗口后
+降到约 8%,而结论所需证据完全保留。
+
 ## 查询命令语义
 
 `view --evidence-id` 支持 JSON 和 text;`window` 默认保持 JSON,也支持 `--format text`。
@@ -167,11 +187,14 @@ MSE 未提供 `--task` 时只执行 Interface、资源组合和静态诊断预�
 `search` 只读取已有 inspection JSON,不重新解析原日志。`--kind`、`--node`、`--task`
 和 `--artifact-id` 执行区分大小写的精确匹配;可重复传入同一选项表示任一值均可。
 `--node` 除顶层 source node 外,也精确匹配 `mla.recognition_detail` 中已保留的
-`childRecognition` / `descendantRecognition` 节点;结果的 `nodeMatches` 会标明顶层、直接子节点
-或后代节点及其路径。嵌套列表仍受 inspection 的既有上限约束,当对应 `*Truncated` 为 true 时,
-搜索结果不能证明未返回的节点不存在。
+`childRecognition` / `descendantRecognition` 节点,以及 `mla.pipeline_override` 覆盖到的
+`nodeNames`;结果的 `nodeMatches` 会以 `source` / `recognition_child` /
+`recognition_descendant` / `pipeline_override` 标明匹配关系及路径。嵌套列表仍受 inspection 的
+既有上限约束,当对应 `*Truncated` 为 true 时,搜索结果不能证明未返回的节点不存在。
 重复的 `--text` 条件执行大小写不敏感的 AND 匹配,搜索 evidence 的摘要、source 和
-结构化 data 的原始值,不匹配 JSON 字段名。
+结构化 data 的原始值,不匹配 JSON 字段名。覆盖载荷的含义恰恰在 key 上,因此
+`mla.pipeline_override` 额外导出 `patchPaths`(如 `EatCandyStart.attach.fast`),
+让被覆盖的字段名以普通值的形式可被 `--text` 命中,而无需放宽“不匹配字段名”这条规则。
 `--from` / `--to` 只匹配带 source timestamp 的 evidence。结果默认最多返回 50 条索引、
 上限 500 条,并明确给出 `totalMatches` 和 `truncated`;完整 data 仍通过 `view --evidence-id` 获取。
 

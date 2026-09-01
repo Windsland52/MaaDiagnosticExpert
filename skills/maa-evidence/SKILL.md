@@ -50,7 +50,10 @@ Do not run MSE, Sentry, exhaustive signals, or source research merely because th
 3. Use the current writable analysis directory and relative paths. Do not probe Windows, Git Bash,
    `/tmp`, and alternate path spellings repeatedly. Batch independent inventory/search commands in
    one tool call.
-4. Start MLA as soon as the complete supported log directory is ready. In parallel, search relevant
+4. Start MLA as soon as the complete supported log directory is ready. When the report names a time,
+   a run, or a timestamped archive, pass `--from`/`--to` for that window first: a narrowed inspection
+   is a fraction of the full document and keeps the decisive records. Write the result with
+   `--output` and read `--summary` rather than piping a full inspection. In parallel, search relevant
    generic logs and inspect only failure-related screenshots.
 5. Read each `mla.failure_context` before interpreting a failure. Follow only the decisive evidence
    IDs with `search`, `view`, `window`, or one `batch`; do not repeatedly reload the same inspection.
@@ -72,6 +75,12 @@ paths, source refs, or request shapes. Stop optional branches when their evidenc
 - A recognition miss is not automatically a failure.
 - Static MSE configuration does not prove runtime causality.
 - Before describing runtime node configuration, inspect applicable `mla.pipeline_override` records.
+  Find them with `--node <NodeName>`, which matches the nodes an override targets, or with
+  `--text` against `patchPaths` (`Node.field.subfield`) when the question is which field was set.
+- Mirrored MaaFramework logs (a launcher copy plus an agent copy) report the same runtime events as
+  separate evidence records with separate provenance. When
+  `mla_cross_artifact_duplicate_observations` is present, pin one `--artifact-id` before counting
+  occurrences, and do not read one event as two.
 - Keep issue-time source configuration, runtime override inputs, observed framework results, and
   later application state as separate layers.
 - Missing multipart archives, empty windows, truncation, unreadable files, unsupported formats, and
@@ -83,6 +92,10 @@ paths, source refs, or request shapes. Stop optional branches when their evidenc
 
 Always inspect `evidence`, `missingEvidence`, `warnings`, `artifacts`, `statistics`, and `details`.
 Focused output omits ordinary signals by design; use `statistics.*Total` for complete counts.
+
+`--summary` emits exactly those bounded blocks plus `evidenceKinds` (the available `--kind` values
+and their counts) without the evidence ledger or `details`. Prefer it as the first read; keep the
+full result on disk with `--output` and reach into it with `search`, `view`, and `window`.
 
 For common follow-ups, prefer a single batch:
 

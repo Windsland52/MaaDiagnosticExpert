@@ -95,7 +95,11 @@ node dist/cli/main.js --version
 maa-evidence inspect C:\path\to\materials --format json --output inspection.json
 
 # 只检查 MaaFramework 日志,可按时间缩小证据范围
-maa-evidence mla inspect C:\path\to\materials --format json
+maa-evidence mla inspect C:\path\to\materials --from 2026-09-01T20:12:00 --to 2026-09-01T20:22:00 `
+  --format json --output inspection.json
+
+# 先读摘要:artifacts / warnings / statistics 和各 evidence kind 的数量
+maa-evidence mla inspect C:\path\to\materials --summary --format text
 
 # 只检查指定项目任务
 maa-evidence mse inspect C:\path\to\project --task StartUp --format text
@@ -176,8 +180,15 @@ Issue 调查采用分阶段快路径:harness 并发获取独立附件并提取 i
 完整后立即先运行聚焦 MLA;只有剩余问题确实需要节点定义、配置阈值或静态执行关系时,才获取
 issue-time 源码并运行聚焦 MSE。已知 task/controller/resource 必须传给 MSE,共享节点只需定义
 和前向路径时使用 `--no-referencers`。多个后续证据查询使用 `batch`,不重复启动 CLI 和解析结果。
-`search --node` 会精确匹配顶层节点和 inspection 中已保留的 And/Or 子识别节点,并通过
-`nodeMatches` 返回匹配关系和嵌套路径;若识别详情标记了截断,空搜索结果不能证明节点不存在。
+`search --node` 会精确匹配顶层节点、inspection 中已保留的 And/Or 子识别节点,以及
+`mla.pipeline_override` 覆盖到的节点,并通过 `nodeMatches` 返回匹配关系和嵌套路径;
+若识别详情标记了截断,空搜索结果不能证明节点不存在。要按“哪个字段被覆盖”检索时,
+用 `--text` 匹配覆盖 evidence 的 `patchPaths`(如 `EatCandyStart.attach.fast`)——
+文本检索按设计不匹配 JSON 字段名,`patchPaths` 把字段路径导出为普通值来弥补这一点。
+镜像日志(启动器与 agent 各写一份)会把同一次运行事件登记为两条各自带来源的 evidence;
+出现 `mla_cross_artifact_duplicate_observations` 警告时,应先固定单个 `--artifact-id` 再计数。
+完整 inspection 的体积由 evidence 账本和 `details` 主导,直接打到 stdout 容易被上游截断;
+优先用 `--summary` 起步,并用 `--output` 把完整结果落盘后再钻取。
 当 MLA 无法把日志目录作为一个组合目标加载、但仍能逐文件回退时,输出会用
 `mla_directory_fallback_used` 警告说明跨文件聚合可能不完整;只有实际逐文件失败继续进入
 `missingEvidence`,避免同一大文件同时产生目录级和文件级缺失记录。

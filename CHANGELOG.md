@@ -7,6 +7,33 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Match `mla.pipeline_override` target nodes in evidence search. `--node` previously covered only the
+  top-level source node and retained recognition children, so an override that configured a node was
+  unreachable by the node the harness was investigating, even though the record already carried
+  `nodeNames`. Matches report the new `pipeline_override` relation.
+- Export `patchPaths` on `mla.pipeline_override` evidence: a bounded, sorted, de-duplicated list of
+  the overridden fields as `Node.field.subfield` strings. Override payloads carry their meaning in
+  object keys, and evidence text search deliberately does not match JSON field names, so the field a
+  run actually set was previously unsearchable. Paths are capped at 200 entries and depth 8, and
+  `patchPathsTruncated` is set only when a path is actually dropped.
+- Add `--summary` to the inspection commands and `summarizeInspection`/`renderInspectionSummary` to
+  the SDK. The summary is a separate `maa-evidence-summary/v1` document holding artifacts, missing
+  evidence, warnings, statistics, and the available evidence kinds with their counts, without the
+  evidence ledger or the details payload that dominate a full result.
+- Report identical observations that repeat across mirrored artifacts through the new
+  `mla_cross_artifact_duplicate_observations` warning and the
+  `crossArtifactDuplicateObservations` statistic. Records keep separate provenance and stay
+  unmerged; the warning names the artifacts so a harness does not read one event as two.
+- Suggest the closest known option when the CLI rejects an unknown one, including the common
+  `--json`/`--text`/`--mermaid` mistake for `--format <value>`.
+
+### Changed
+
+- Document narrowing a known incident window with `--from`/`--to` and starting from `--summary` in
+  the CLI reference, the README, and the host-agent Skill.
+
 ## [0.4.0] - 2026-09-01
 
 ### Added
