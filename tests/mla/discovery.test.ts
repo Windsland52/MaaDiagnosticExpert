@@ -43,3 +43,21 @@ test("discovers Maa logs while reporting unsupported and missing multipart mater
     expect.objectContaining({ code: "multipart_archive_part_missing" }),
   ]));
 });
+
+// @windsland52/maa-log-tools 2.0.0 dropped the upstream archive entry-count limit, so MEK's own
+// scan bound is the only entry-count guard left on a discovered directory. Pin the reported bound
+// fields so a future upstream or local change to that limit fails here instead of silently
+// widening how much of a directory an inspection walks.
+test("reports the scanned-file bound instead of relying on an upstream entry-count limit", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "mek-discovery-bound-"));
+  temporaryRoots.push(root);
+  for (const name of ["a.txt", "b.txt", "c.txt"]) {
+    await writeFile(path.join(root, name), "[2026-04-08 00:01:02.001][INF][Px1][Tx2][test] line", "utf8");
+  }
+
+  const discovery = await discoverArtifacts(root);
+
+  expect(discovery.scannedFileCount).toBe(3);
+  expect(discovery.omittedOtherFileCount).toBe(0);
+  expect(discovery.warnings.map((warning) => warning.code)).not.toContain("artifact_scan_truncated");
+});

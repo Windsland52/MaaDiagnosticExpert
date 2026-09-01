@@ -9,6 +9,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Update `@windsland52/maa-log-tools` to 2.0.0. That release removes `ArchiveLimits.maxEntries` and
+  the `entry-count` `ArchiveLimitCode` from the public surface, and `loadNodeLogDirectory` no longer
+  caps how many entries a directory may contribute. MEK never configured that limit, so no call site
+  changed; artifact discovery stays bounded by MEK's own scanned-file limit, while the directory read
+  inside the upstream loader is now bounded only by its byte budgets.
+- Update `@nekosu/maa-pipeline-manager` to 1.0.14, which fixes content watching on macOS by using
+  polling and moves the transitive `@nekosu/maa-locale` to 1.1.0. `@nekosu/maa-tasker` is already
+  current and stays pinned to 1.0.0.
 - Extend the host-agent Skill's Sentry reference with release-health triage: obtain a per-release
   session denominator before comparing versions, separate telemetry-schema and tag-coverage changes
   from real regressions, correlate a suspected regression with the application's own issue-time tag

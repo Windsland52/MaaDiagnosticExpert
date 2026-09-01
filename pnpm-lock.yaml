@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@nekosu/maa-pipeline-manager':
-        specifier: 1.0.13
-        version: 1.0.13
+        specifier: 1.0.14
+        version: 1.0.14
       '@nekosu/maa-tasker':
         specifier: 1.0.0
         version: 1.0.0
@@ -18,8 +18,8 @@ importers:
         specifier: 10.69.0
         version: 10.69.0(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))
       '@windsland52/maa-log-tools':
-        specifier: 1.3.1
-        version: 1.3.1
+        specifier: 2.0.0
+        version: 2.0.0
       cross-spawn:
         specifier: 7.0.6
         version: 7.0.6
@@ -115,11 +115,11 @@ packages:
       '@emnapi/core': ^1.7.1 || ^2.0.0-alpha.3
       '@emnapi/runtime': ^1.7.1 || ^2.0.0-alpha.3
 
-  '@nekosu/maa-locale@1.0.3':
-    resolution: {integrity: sha512-7HNGbhhuKky8kumBxAJXrezSzIPmP1en+DlqENx5r5DZHwJRCDSjzbW7Wi7Zogbo8lpBZNq631kEDspdTbFKIA==}
+  '@nekosu/maa-locale@1.1.0':
+    resolution: {integrity: sha512-bVfUFO47H9Ja1F3ufGf4eTB8fWuo+4uWFvTVZpusVeGvAjo60+5jSTKsxxiv7W7Lj0//tU8gyNxR08m65b72QA==}
 
-  '@nekosu/maa-pipeline-manager@1.0.13':
-    resolution: {integrity: sha512-zgnZXk2HwIIGnTSMqAn36kfg4vVYMc9QfDFx6THz+cngkrNQB20kgK6jBgrUFopokMvEOlRY/KpBZmraJVwATw==}
+  '@nekosu/maa-pipeline-manager@1.0.14':
+    resolution: {integrity: sha512-tJmjik7ObIlQj9LgHP7WoAyKYLa3NmyFn9KQXxFu8MjHP3ln1EmYHyMC8Cq3GflGDNKabPO148v1jkHE4Pg5Qg==}
 
   '@nekosu/maa-tasker@1.0.0':
     resolution: {integrity: sha512-p5SaBJGvAMr5J2uk6imoiK7eIF7yA67HndWyfxddAHHdoyliai2dkHqBhTmDDuRmmAJ/ly4INg5Hnx8CI7Po3A==}
@@ -621,12 +621,16 @@ packages:
     resolution: {integrity: sha512-LRbRTJ3yYXu5zWULA1GkQFN8fZu4eGcdmzzr2/XlTnM2Hg2Tmo+BTVHacROcCMiJqz77tRBLcLrEXnm7jCdu9A==}
     engines: {node: '>=20.18.0'}
 
+  '@windsland52/maa-log-parser@1.2.0':
+    resolution: {integrity: sha512-c+zC5PG/+tTjmSGGSk3UR8FMeG9SSkWsuCbD8/5dVyOLOjAJ7M8lnS1NpTEsP4YVSf8tngJC0WZ9J248OSxU7g==}
+    engines: {node: '>=20.18.0'}
+
   '@windsland52/maa-log-runtime@1.1.0':
     resolution: {integrity: sha512-33QSpc093kqGZR3yUzA+vz5QdeWednKeweqApJ6fvT2oWX71TEGWX2CHLUoyPlqqy6sMHA6zbHGHmyujAFROww==}
     engines: {node: '>=20.18.0'}
 
-  '@windsland52/maa-log-tools@1.3.1':
-    resolution: {integrity: sha512-wzC4j1ZQLrtn7cZr4VjQhS9NAU7mcCRq9Ap2dZgyrThHgZYnd4OW6OhQlXkH88I5lx+Hcu5m6s2gRzFXyhqmaw==}
+  '@windsland52/maa-log-tools@2.0.0':
+    resolution: {integrity: sha512-S/5xU7FZqANyZIeVx3czDgFQTraPD6k+xQVrTR20smgDxMhDsam7jnp2tsQNvlE2aHk3zpQIR4WKLFxk4eoZzg==}
     engines: {node: '>=20.18.0'}
     hasBin: true
 
@@ -1085,11 +1089,11 @@ snapshots:
       '@tybys/wasm-util': 0.10.3
     optional: true
 
-  '@nekosu/maa-locale@1.0.3': {}
+  '@nekosu/maa-locale@1.1.0': {}
 
-  '@nekosu/maa-pipeline-manager@1.0.13':
+  '@nekosu/maa-pipeline-manager@1.0.14':
     dependencies:
-      '@nekosu/maa-locale': 1.0.3
+      '@nekosu/maa-locale': 1.1.0
       '@nekosu/maa-tasker': 1.0.0
       chokidar: 5.0.0
       jsonc-parser: 3.3.1
@@ -1442,15 +1446,17 @@ snapshots:
 
   '@windsland52/maa-log-parser@1.1.0': {}
 
+  '@windsland52/maa-log-parser@1.2.0': {}
+
   '@windsland52/maa-log-runtime@1.1.0':
     dependencies:
       '@windsland52/maa-log-kernel': 1.0.2
 
-  '@windsland52/maa-log-tools@1.3.1':
+  '@windsland52/maa-log-tools@2.0.0':
     dependencies:
       '@windsland52/maa-log-adapter': 1.1.0
       '@windsland52/maa-log-kernel': 1.0.2
-      '@windsland52/maa-log-parser': 1.1.0
+      '@windsland52/maa-log-parser': 1.2.0
       '@windsland52/maa-log-runtime': 1.1.0
       fflate: 0.8.3
 
