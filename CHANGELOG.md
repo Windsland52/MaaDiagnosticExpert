@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-01
+
 ### Added
 
 - Match `mla.pipeline_override` target nodes in evidence search. `--node` previously covered only the
@@ -181,7 +183,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Whitelist-only operational telemetry, disabled default PII, and mandatory preview/confirmation for
   feedback attachments.
 
-[Unreleased]: https://github.com/Windsland52/MaaEvidenceKit/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/Windsland52/MaaEvidenceKit/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/Windsland52/MaaEvidenceKit/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/Windsland52/MaaEvidenceKit/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/Windsland52/MaaEvidenceKit/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/Windsland52/MaaEvidenceKit/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/Windsland52/MaaEvidenceKit/compare/v0.2.0...v0.3.0
