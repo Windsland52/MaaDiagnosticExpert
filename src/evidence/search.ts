@@ -26,7 +26,7 @@ export type EvidenceSearchItem = {
 
 export type EvidenceSearchNodeMatch = {
   node: string;
-  relation: "source" | "recognition_child" | "recognition_descendant";
+  relation: "source" | "recognition_child" | "recognition_descendant" | "pipeline_override";
   path?: string[];
 };
 
@@ -131,6 +131,15 @@ function exactNodeMatches(evidence: Evidence, requestedNodes: readonly string[])
           relation: recognitionPath.length <= 1 ? "recognition_child" : "recognition_descendant",
           ...(recognitionPath.length === 0 ? {} : { path: recognitionPath }),
         });
+      }
+    }
+  }
+  if (evidence.kind === "mla.pipeline_override" && isRecord(evidence.data)) {
+    const overridden = evidence.data["nodeNames"];
+    if (Array.isArray(overridden)) {
+      for (const name of overridden) {
+        if (typeof name !== "string") continue;
+        add({ node: name, relation: "pipeline_override" });
       }
     }
   }

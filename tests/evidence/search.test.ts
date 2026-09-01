@@ -114,6 +114,33 @@ test("matches retained child and descendant recognition nodes exactly", () => {
   }]);
 });
 
+test("matches the nodes a runtime pipeline override targets", () => {
+  const result = inspection([{
+    id: "evidence-override",
+    kind: "mla.pipeline_override",
+    summary: "Observed task submission pipeline override for 2 nodes.",
+    source: { artifactId: "artifact-1", path: "maafw.log", line: 42, task: "CombatActivity" },
+    data: {
+      nodeNames: ["EatCandyStart", "EatMiniCandy"],
+      patchPaths: ["EatCandyStart.attach.fast", "EatCandyStart.max_hit", "EatMiniCandy.enabled"],
+      patchPathsTruncated: false,
+      patches: [{ EatCandyStart: { attach: { fast: 1 } } }],
+    },
+  }]);
+
+  const byNode = searchEvidence(result, { nodes: ["EatCandyStart"] });
+  expect(byNode.evidence[0]?.nodeMatches).toEqual([{
+    node: "EatCandyStart",
+    relation: "pipeline_override",
+  }]);
+  expect(searchEvidence(result, { nodes: ["Unrelated"] }).totalMatches).toBe(0);
+
+  // The overridden field name only exists as an object key inside `patches`, which text search
+  // deliberately ignores; the flattened patch paths keep it findable as an ordinary value.
+  expect(searchEvidence(result, { text: ["fast"] }).totalMatches).toBe(1);
+  expect(searchEvidence(result, { text: ["attach.fast"] }).totalMatches).toBe(1);
+});
+
 test("reports truncation and rejects invalid search bounds", () => {
   const result = inspection(Array.from({ length: 3 }, (_, index) => ({
     id: `evidence-${index}`,
