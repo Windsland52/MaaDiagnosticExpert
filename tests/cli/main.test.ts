@@ -79,37 +79,65 @@ test("suggests the closest option when an unknown flag is supplied", async () =>
   expect(errorOutput).toContain("Unknown option: --nodes. Did you mean --node?");
 });
 
-test("emits a bounded inspection summary instead of the full document", async () => {
+test("writes the full report to --output while --summary keeps stdout bounded", async () => {
   const root = await mlaFixture();
-  const summaryPath = path.join(root, "summary.json");
-  const fullPath = path.join(root, "inspection.json");
+  const reportPath = path.join(root, "report.json");
+  let output = "";
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    output += String(chunk);
+    return true;
+  });
 
-  expect(await main(["mla", "inspect", root, "--summary", "--format", "json", "--output", summaryPath])).toBe(0);
-  expect(await main(["mla", "inspect", root, "--format", "json", "--output", fullPath])).toBe(0);
+  expect(await main(["mla", "inspect", root, "--summary", "--format", "json", "--output", reportPath])).toBe(0);
 
-  const summary = JSON.parse(await readFile(summaryPath, "utf8")) as Record<string, unknown>;
-  expect(summary["schemaVersion"]).toBe("maa-evidence-summary/v1");
-  expect(summary["kind"]).toBe("mla");
-  expect(summary).not.toHaveProperty("evidence");
-  expect(summary).not.toHaveProperty("details");
-  expect(summary["statistics"]).toBeDefined();
-  expect(Array.isArray(summary["evidenceKinds"])).toBe(true);
-  expect(typeof summary["evidenceCount"]).toBe("number");
+  const stdoutSummary = JSON.parse(output) as Record<string, unknown>;
+  expect(stdoutSummary["schemaVersion"]).toBe("maa-evidence-summary/v1");
+  expect(stdoutSummary["kind"]).toBe("mla");
+  expect(stdoutSummary).not.toHaveProperty("evidence");
+  expect(stdoutSummary).not.toHaveProperty("details");
+  expect(stdoutSummary["statistics"]).toBeDefined();
+  expect(Array.isArray(stdoutSummary["evidenceKinds"])).toBe(true);
+  expect(typeof stdoutSummary["evidenceCount"]).toBe("number");
 
-  const full = await readFile(fullPath, "utf8");
-  expect((await readFile(summaryPath, "utf8")).length).toBeLessThan(full.length);
+  const saved = JSON.parse(await readFile(reportPath, "utf8")) as Record<string, unknown>;
+  expect(saved["schemaVersion"]).toBe("maa-evidence/v1");
+  expect(saved["kind"]).toBe("mla");
+  expect(saved["evidence"]).toBeDefined();
+  expect(output.length).toBeLessThan((await readFile(reportPath, "utf8")).length);
 });
 
-test("emits a text inspection summary naming artifacts and evidence kinds", async () => {
+test("emits a text inspection summary to stdout and the full report to --output", async () => {
   const root = await mlaFixture();
-  const summaryPath = path.join(root, "summary.txt");
+  const reportPath = path.join(root, "report.txt");
+  let output = "";
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    output += String(chunk);
+    return true;
+  });
 
-  expect(await main(["mla", "inspect", root, "--summary", "--format", "text", "--output", summaryPath])).toBe(0);
+  expect(await main(["mla", "inspect", root, "--summary", "--format", "text", "--output", reportPath])).toBe(0);
 
-  const summary = await readFile(summaryPath, "utf8");
-  expect(summary).toContain("MaaEvidenceKit mla inspection summary");
-  expect(summary).toContain("maafw.log");
-  expect(summary).toContain("Evidence:");
+  expect(output).toContain("MaaEvidenceKit mla inspection summary");
+  expect(output).toContain("maafw.log");
+  expect(output).toContain("Evidence:");
+
+  const saved = await readFile(reportPath, "utf8");
+  expect(saved).not.toContain("inspection summary");
+  expect(saved).toContain("MaaEvidenceKit mla inspection");
+});
+
+test("keeps a report saved with --summary consumable by downstream evidence queries", async () => {
+  const root = await mlaFixture();
+  const reportPath = path.join(root, "report.json");
+  let output = "";
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    output += String(chunk);
+    return true;
+  });
+
+  expect(await main(["mla", "inspect", root, "--summary", "--output", reportPath])).toBe(0);
+  expect(await main(["search", "--input", reportPath, "--kind", "mla.task"])).toBe(0);
+  expect(output).toContain("maa-evidence-search/v1");
 });
 
 test("rejects Mermaid output for an inspection summary", async () => {

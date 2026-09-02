@@ -60,8 +60,9 @@ Usage:
 Common options:
   --output FILE       Write output to a file
   --format FORMAT     json, text, or mermaid
-  --summary           Emit only artifacts, statistics, warnings, and evidence kinds
-                      (every inspection command; json or text)
+  --summary           Print only artifacts, statistics, warnings, and evidence kinds to
+                      stdout (every inspection command; json or text). --output always
+                      receives the full report, so view/search/window can consume it.
   --profile FILE      Write local stage timings as JSON
   --version           Show the MaaEvidenceKit version
   -h, --help          Show this help
@@ -117,14 +118,23 @@ function outputFormat(parsed: ParsedArguments): ViewFormat {
 
 async function emitInspection(result: InspectionResult, parsed: ParsedArguments): Promise<void> {
   const format = outputFormat(parsed);
+  const output = option(parsed, "--output");
   if (flag(parsed, "--summary")) {
     if (format === "mermaid") throw new UsageError("--summary supports --format json or text.");
     const summary = profileStageSync("render", () => renderInspectionSummary(result, format));
-    await emit(summary, option(parsed, "--output"));
+    if (output === undefined) {
+      await emit(summary);
+      return;
+    }
+    // A saved report must stay consumable by view/search/window, so --output always
+    // receives the full document; --summary only decides what stdout shows.
+    const rendered = profileStageSync("render", () => view(result, { format }));
+    await emit(rendered, output);
+    await emit(summary);
     return;
   }
   const rendered = profileStageSync("render", () => view(result, { format }));
-  await emit(rendered, option(parsed, "--output"));
+  await emit(rendered, output);
 }
 
 async function runMla(parsed: ParsedArguments): Promise<InspectionResult> {

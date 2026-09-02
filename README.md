@@ -188,7 +188,8 @@ issue-time 源码并运行聚焦 MSE。已知 task/controller/resource 必须传
 镜像日志(启动器与 agent 各写一份)会把同一次运行事件登记为两条各自带来源的 evidence;
 出现 `mla_cross_artifact_duplicate_observations` 警告时,应先固定单个 `--artifact-id` 再计数。
 完整 inspection 的体积由 evidence 账本和 `details` 主导,直接打到 stdout 容易被上游截断;
-优先用 `--summary` 起步,并用 `--output` 把完整结果落盘后再钻取。
+优先用 `--summary` 起步;`--output` 恒写完整报告(可与 `--summary` 同用:`--summary` 只影响 stdout,
+全量报告落盘),一次运行即可落盘后钻取,无需重跑。
 当 MLA 无法把日志目录作为一个组合目标加载、但仍能逐文件回退时,输出会用
 `mla_directory_fallback_used` 警告说明跨文件聚合可能不完整;只有实际逐文件失败继续进入
 `missingEvidence`,避免同一大文件同时产生目录级和文件级缺失记录。

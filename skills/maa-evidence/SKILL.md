@@ -52,8 +52,9 @@ Do not run MSE, Sentry, exhaustive signals, or source research merely because th
    one tool call.
 4. Start MLA as soon as the complete supported log directory is ready. When the report names a time,
    a run, or a timestamped archive, pass `--from`/`--to` for that window first: a narrowed inspection
-   is a fraction of the full document and keeps the decisive records. Write the result with
-   `--output` and read `--summary` rather than piping a full inspection. In parallel, search relevant
+   is a fraction of the full document and keeps the decisive records. Run one inspection with
+   `--summary --output REPORT`: the full report lands in REPORT for later `search`/`view`/`window`,
+   while stdout shows the bounded summary. In parallel, search relevant
    generic logs and inspect only failure-related screenshots.
 5. Read each `mla.failure_context` before interpreting a failure. Follow only the decisive evidence
    IDs with `search`, `view`, `window`, or one `batch`; do not repeatedly reload the same inspection.
@@ -94,8 +95,9 @@ Always inspect `evidence`, `missingEvidence`, `warnings`, `artifacts`, `statisti
 Focused output omits ordinary signals by design; use `statistics.*Total` for complete counts.
 
 `--summary` emits exactly those bounded blocks plus `evidenceKinds` (the available `--kind` values
-and their counts) without the evidence ledger or `details`. Prefer it as the first read; keep the
-full result on disk with `--output` and reach into it with `search`, `view`, and `window`.
+and their counts) without the evidence ledger or `details`. It affects only stdout: with
+`--output`, the file always receives the full report, so one `--summary --output REPORT` run both
+bounds the first read and keeps REPORT consumable by `search`, `view`, and `window`.
 
 For common follow-ups, prefer a single batch:
 
