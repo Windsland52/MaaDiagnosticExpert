@@ -1,5 +1,6 @@
 import type {
   Artifact,
+  Evidence,
   InspectionInput,
   InspectionKind,
   InspectionResult,
@@ -10,10 +11,23 @@ import type {
 export const INSPECTION_SUMMARY_SCHEMA_VERSION = "maa-evidence-summary/v1" as const;
 
 const MAX_TEXT_ARTIFACTS = 50;
+const MAX_NOTABLE_IDENTITIES = 10;
 
 export type InspectionEvidenceKindCount = {
   kind: string;
   count: number;
+};
+
+export type InspectionSummaryEvidenceIdentity = {
+  id: string;
+  summary: string;
+};
+
+export type InspectionSummaryNotableEvidence = {
+  kind: string;
+  total: number;
+  omitted: number;
+  identities: InspectionSummaryEvidenceIdentity[];
 };
 
 export type InspectionSummary = {
@@ -27,7 +41,52 @@ export type InspectionSummary = {
   statistics: Record<string, number>;
   evidenceCount: number;
   evidenceKinds: InspectionEvidenceKindCount[];
+  notableEvidence: InspectionSummaryNotableEvidence[];
 };
+
+const NOTABLE_EVIDENCE_KINDS = [
+  "mla.task_anomaly",
+  "mla.outcome",
+  "mla.cycle_exit_blocker",
+  "mla.possible_mirrored_task_group",
+  "mla.signal",
+] as const;
+
+function isFailedOutcome(item: Evidence): boolean {
+  return (item.data as { status?: unknown } | undefined)?.status === "failed";
+}
+
+function isRepeatedNodeSegment(item: Evidence): boolean {
+  const kind = (item.data as { kind?: unknown } | undefined)?.kind;
+  return kind === "repeated_node" || kind === "repeated_node_cycle";
+}
+
+/**
+ * Embed identities for the evidence kinds a harness acts on right after reading the summary.
+ * Each list is bounded and deterministic; outcome records put failures first, and signals
+ * contribute only repeated node segments so recognition activity stays out of the summary.
+ */
+function buildNotableEvidence(evidence: readonly Evidence[]): InspectionSummaryNotableEvidence[] {
+  const notable: InspectionSummaryNotableEvidence[] = [];
+  for (const kind of NOTABLE_EVIDENCE_KINDS) {
+    const items = evidence
+      .filter((item) => item.kind === kind)
+      .filter((item) => kind !== "mla.signal" || isRepeatedNodeSegment(item));
+    if (items.length === 0) continue;
+    const ordered = kind === "mla.outcome"
+      ? [...items.filter(isFailedOutcome), ...items.filter((item) => !isFailedOutcome(item))]
+      : items;
+    const identities = ordered.slice(0, MAX_NOTABLE_IDENTITIES)
+      .map((item) => ({ id: item.id, summary: item.summary }));
+    notable.push({
+      kind,
+      total: ordered.length,
+      identities,
+      omitted: ordered.length - identities.length,
+    });
+  }
+  return notable;
+}
 
 /**
  * Reduce an inspection to its bounded summary blocks. The evidence ledger and the details payload
@@ -52,6 +111,7 @@ export function summarizeInspection(result: InspectionResult): InspectionSummary
     evidenceKinds: [...counts.entries()]
       .map(([kind, count]) => ({ kind, count }))
       .sort((left, right) => left.kind.localeCompare(right.kind)),
+    notableEvidence: buildNotableEvidence(result.evidence),
   };
 }
 
@@ -73,6 +133,15 @@ function renderSummaryText(summary: InspectionSummary): string {
   }
   lines.push(`Evidence: ${summary.evidenceCount}`);
   for (const entry of summary.evidenceKinds) lines.push(`- ${entry.kind}: ${entry.count}`);
+  if (summary.notableEvidence.length > 0) {
+    lines.push("Notable evidence:");
+    for (const entry of summary.notableEvidence) {
+      lines.push(entry.omitted > 0
+        ? `- ${entry.kind}: ${entry.total} total (${entry.identities.length} listed, ${entry.omitted} omitted)`
+        : `- ${entry.kind}: ${entry.total}`);
+      for (const identity of entry.identities) lines.push(`  - ${identity.id}: ${identity.summary}`);
+    }
+  }
   if (Object.keys(summary.statistics).length > 0) {
     lines.push("Statistics:");
     for (const [key, value] of Object.entries(summary.statistics)) lines.push(`- ${key}: ${value}`);

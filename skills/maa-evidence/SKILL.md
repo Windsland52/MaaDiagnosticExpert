@@ -97,7 +97,11 @@ Focused output omits ordinary signals by design; use `statistics.*Total` for com
 `--summary` emits exactly those bounded blocks plus `evidenceKinds` (the available `--kind` values
 and their counts) without the evidence ledger or `details`. It affects only stdout: with
 `--output`, the file always receives the full report, so one `--summary --output REPORT` run both
-bounds the first read and keeps REPORT consumable by `search`, `view`, and `window`.
+bounds the first read and keeps REPORT consumable by `search`, `view`, and `window`. The
+`notableEvidence` block embeds up to ten identities per actionable kind (`mla.task_anomaly`,
+`mla.outcome` with failures first, `mla.cycle_exit_blocker`, `mla.possible_mirrored_task_group`,
+and repeated `mla.signal` node segments) with `total`/`omitted`, so follow-ups can go straight to
+`view --evidence-id` instead of a discovery search round trip.
 
 For common follow-ups, prefer a single batch:
 

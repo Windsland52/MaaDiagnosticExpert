@@ -52,6 +52,41 @@ function result(): InspectionResult {
         source: { artifactId: "artifact-1", path: "maafw.log", line: 30 },
         data: {},
       },
+      {
+        id: "evidence-4",
+        kind: "mla.task_anomaly",
+        summary: "Task Combat succeeded with anomalies: all_evaluations_failed.",
+        source: { artifactId: "artifact-1", path: "maafw.log", line: 40 },
+        data: {},
+      },
+      {
+        id: "evidence-5",
+        kind: "mla.outcome",
+        summary: "Task Combat was failed.",
+        source: { artifactId: "artifact-1", path: "maafw.log", line: 50 },
+        data: { status: "failed" },
+      },
+      {
+        id: "evidence-6",
+        kind: "mla.outcome",
+        summary: "Task Collect was success.",
+        source: { artifactId: "artifact-1", path: "maafw.log", line: 60 },
+        data: { status: "success" },
+      },
+      {
+        id: "evidence-7",
+        kind: "mla.signal",
+        summary: "Observed repeated node sequence Move → Eat.",
+        source: { artifactId: "artifact-1", path: "maafw.log", line: 70 },
+        data: { kind: "repeated_node" },
+      },
+      {
+        id: "evidence-8",
+        kind: "mla.signal",
+        summary: "Recognition activity for node Eat.",
+        source: { artifactId: "artifact-1", path: "maafw.log", line: 80 },
+        data: { kind: "recognition_activity" },
+      },
     ],
     missingEvidence: [],
     warnings: [{ code: "mla_signals_focused", message: "Selected 403 of 935 runtime signals." }],
@@ -64,10 +99,13 @@ test("reduces an inspection to bounded summary blocks with the available evidenc
   const summary = summarizeInspection(result());
 
   expect(summary.schemaVersion).toBe(INSPECTION_SUMMARY_SCHEMA_VERSION);
-  expect(summary.evidenceCount).toBe(3);
+  expect(summary.evidenceCount).toBe(8);
   expect(summary.evidenceKinds).toEqual([
     { kind: "mla.action_detail", count: 2 },
+    { kind: "mla.outcome", count: 2 },
     { kind: "mla.pipeline_override", count: 1 },
+    { kind: "mla.signal", count: 2 },
+    { kind: "mla.task_anomaly", count: 1 },
   ]);
   expect(summary.artifacts).toHaveLength(2);
   expect(summary.warnings).toHaveLength(1);
@@ -81,7 +119,7 @@ test("keeps the rendered summary far smaller than the full inspection document",
 
   expect(summary.length).toBeLessThan(JSON.stringify(inspection).length);
   expect(summary).not.toContain("enormous");
-  expect(JSON.parse(summary)).toMatchObject({ evidenceCount: 3 });
+  expect(JSON.parse(summary)).toMatchObject({ evidenceCount: 8 });
 });
 
 test("renders a text summary that names artifacts, evidence kinds, and warnings", () => {
@@ -91,5 +129,58 @@ test("renders a text summary that names artifacts, evidence kinds, and warnings"
   expect(text).toContain("Artifacts: 1 selected / 2 reported");
   expect(text).toContain("artifact-2 [log/available] custom/2026-09-01.log");
   expect(text).toContain("- mla.pipeline_override: 1");
+  expect(text).toContain("Notable evidence:");
+  expect(text).toContain("- mla.outcome: 2");
+  expect(text).toContain("  - evidence-5: Task Combat was failed.");
+  expect(text).toContain("- mla.signal: 1");
   expect(text).toContain("[mla_signals_focused]");
+});
+
+test("embeds identities for notable evidence with failures first and a bounded list", () => {
+  const summary = summarizeInspection(result());
+  const outcome = summary.notableEvidence.find((entry) => entry.kind === "mla.outcome");
+  expect(outcome).toEqual({
+    kind: "mla.outcome",
+    total: 2,
+    omitted: 0,
+    identities: [
+      { id: "evidence-5", summary: "Task Combat was failed." },
+      { id: "evidence-6", summary: "Task Collect was success." },
+    ],
+  });
+  expect(summary.notableEvidence.find((entry) => entry.kind === "mla.signal")).toEqual({
+    kind: "mla.signal",
+    total: 1,
+    omitted: 0,
+    identities: [{ id: "evidence-7", summary: "Observed repeated node sequence Move → Eat." }],
+  });
+  expect(summary.notableEvidence.find((entry) => entry.kind === "mla.task_anomaly")).toEqual({
+    kind: "mla.task_anomaly",
+    total: 1,
+    omitted: 0,
+    identities: [
+      { id: "evidence-4", summary: "Task Combat succeeded with anomalies: all_evaluations_failed." },
+    ],
+  });
+});
+
+test("caps notable identities at ten and reports the omitted remainder", () => {
+  const base = result();
+  const inspection: InspectionResult = {
+    ...base,
+    evidence: Array.from({ length: 12 }, (_, index) => ({
+      id: `outcome-${index + 1}`,
+      kind: "mla.outcome",
+      summary: `Task T${index + 1} was failed.`,
+      source: { artifactId: "artifact-1", path: "maafw.log", line: index + 1 },
+      data: { status: "failed" },
+    })),
+  };
+
+  const summary = summarizeInspection(inspection);
+  const outcome = summary.notableEvidence.find((entry) => entry.kind === "mla.outcome");
+  expect(outcome?.total).toBe(12);
+  expect(outcome?.identities).toHaveLength(10);
+  expect(outcome?.omitted).toBe(2);
+  expect(outcome?.identities[0]).toEqual({ id: "outcome-1", summary: "Task T1 was failed." });
 });
