@@ -11,6 +11,7 @@ import {
   type LogBundleFocus,
   type SourceSegment,
 } from "@windsland52/maa-log-tools";
+import { buildNodeExecutionTimeline } from "@windsland52/maa-log-tools/node-execution-timeline";
 
 import {
   EVIDENCE_SCHEMA_VERSION,
@@ -194,6 +195,25 @@ export type MlaTaskAnomaly = {
   actionFailures: number;
   stillRepeatingAtLogEnd: number;
   allEvaluationsFailed: number;
+};
+
+export type MlaNodeTimelineEvent = "success" | "failed" | "running" | "timeout" | "action-failed";
+
+export type MlaTaskTimelineEntry = {
+  ts: string;
+  event: MlaNodeTimelineEvent;
+  node: string;
+  matched?: string;
+};
+
+export type MlaTaskTimeline = {
+  executionId: string;
+  taskId: number;
+  name: string;
+  status: "running" | "succeeded" | "failed";
+  startedAt: string;
+  endedAt: string | null;
+  entries: MlaTaskTimelineEntry[];
 };
 
 export type MlaCycleExitCandidate = {
@@ -392,6 +412,7 @@ export type MlaInspectOptions = {
 
 export type MlaInspectionDetails = {
   runtime: MlaRuntimeInspectionResult;
+  taskTimelines: MlaTaskTimeline[];
   selection: {
     requestedTimeRange?: TimeRange;
     keywords: string[];
@@ -1192,6 +1213,7 @@ type MlaTarget = {
 type LoadedMlaTarget = {
   target: MlaTarget;
   runtime: MlaRuntimeInspectionResult;
+  taskTimelines: MlaTaskTimeline[];
   recognitionDetails: MlaRecognitionDetail[];
   actionDetails: MlaActionDetail[];
   actionDetailsTotal: number;
@@ -2237,6 +2259,66 @@ function extractRecognitionDetails(
   });
 }
 
+function buildTargetTaskTimelines(
+  analyzed: Awaited<ReturnType<typeof analyzeLogContent>>,
+  runtime: MlaRuntimeInspectionResult,
+): MlaTaskTimeline[] {
+  // Task ids restart across framework sessions inside one bundle, so a kernel task is
+  // identified by (task_id, start_time); the runtime execution copies that timestamp
+  // verbatim into started_at, which keeps correlation correct under time-range focus.
+  const entriesByTaskExecution = new Map<string, MlaTaskTimelineEntry[]>();
+  for (const kernelTask of analyzed.tasks) {
+    const timeline = buildNodeExecutionTimeline(kernelTask.nodes, { rootTaskId: kernelTask.task_id });
+    entriesByTaskExecution.set(
+      `${kernelTask.task_id}|${kernelTask.start_time}`,
+      timeline.map((item) => ({
+        ts: item.ts,
+        event: item.navStatus,
+        node: item.executionName,
+        ...(item.matchedRecognitionName === undefined ? {} : { matched: item.matchedRecognitionName }),
+      })),
+    );
+  }
+  return [
+    ...runtime.sessions.flatMap((session) => session.tasks),
+    ...runtime.unscoped_tasks,
+  ].map((task) => ({
+    executionId: task.execution_id,
+    taskId: task.task_id,
+    name: task.name,
+    status: task.status,
+    startedAt: task.started_at,
+    endedAt: task.ended_at,
+    entries: entriesByTaskExecution.get(`${task.task_id}|${task.started_at}`) ?? [],
+  }));
+}
+
+function mergeTaskTimelines(
+  loadedTargets: readonly LoadedMlaTarget[],
+  runtime: MlaRuntimeInspectionResult,
+): MlaTaskTimeline[] {
+  const entriesByExecution = new Map<string, MlaTaskTimelineEntry[]>();
+  for (const loaded of loadedTargets) {
+    for (const timeline of loaded.taskTimelines) {
+      if (!entriesByExecution.has(timeline.executionId)) {
+        entriesByExecution.set(timeline.executionId, timeline.entries);
+      }
+    }
+  }
+  return [
+    ...runtime.sessions.flatMap((session) => session.tasks),
+    ...runtime.unscoped_tasks,
+  ].map((task) => ({
+    executionId: task.execution_id,
+    taskId: task.task_id,
+    name: task.name,
+    status: task.status,
+    startedAt: task.started_at,
+    endedAt: task.ended_at,
+    entries: entriesByExecution.get(task.execution_id) ?? [],
+  }));
+}
+
 async function loadMlaTarget(
   target: MlaTarget,
   artifacts: readonly Artifact[],
@@ -2301,9 +2383,11 @@ async function loadMlaTarget(
   const allActionDetails = extractActionDetails(analyzed, timeRange);
   const pipelineOverrideExtraction = extractPipelineOverrides(content, timeRange);
   const pipelineOverrides = boundedPipelineOverrides(pipelineOverrideExtraction.observations);
+  const namespacedRuntime = namespaceRuntime(runtime, target.namespace);
   return {
     target,
-    runtime: namespaceRuntime(runtime, target.namespace),
+    runtime: namespacedRuntime,
+    taskTimelines: buildTargetTaskTimelines(analyzed, namespacedRuntime),
     recognitionDetails: extractRecognitionDetails(analyzed, timeRange),
     actionDetails: boundedActionDetails(allActionDetails),
     actionDetailsTotal: allActionDetails.length,
@@ -2399,6 +2483,7 @@ export async function inspectMla(
   const completeSignalCounts = countRuntimeSignals(completeRuntime);
   const focusedSignalCounts = countRuntimeSignals(runtime);
   const possibleMirroredTaskGroups = findPossibleMirroredTaskGroups(runtime);
+  const taskTimelines = mergeTaskTimelines(loadedTargets, runtime);
   const selectedSignalIds = new Set(runtime.signals.map((signal) => signal.signal_id));
   const loadingGranularity = loadedTargets.length > 1
     ? "multiple_bundles" as const
@@ -2601,6 +2686,7 @@ export async function inspectMla(
     },
     details: {
       runtime,
+      taskTimelines,
       selection: {
         ...(options.timeRange === undefined ? {} : { requestedTimeRange: options.timeRange }),
         keywords: focus?.keywords ?? [],

@@ -35,4 +35,15 @@ export {
   type SummaryFormat,
 } from "./summary.js";
 export { renderText } from "./text.js";
+export {
+  TASK_TIMELINE_SCHEMA_VERSION,
+  renderTaskTimeline,
+  taskTimeline,
+  type TaskTimelineEntry,
+  type TaskTimelineEvent,
+  type TaskTimelineFormat,
+  type TaskTimelineOptions,
+  type TaskTimelineTask,
+  type TaskTimelineView,
+} from "./timeline.js";
 export { renderEvidenceWindow, type EvidenceWindowFormat } from "./window.js";

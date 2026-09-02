@@ -144,7 +144,8 @@ export type OperationalTelemetry = {
   command: string;
   status: "ok" | "error";
   durationMs: number;
-  component?: "mla" | "mse" | "combined" | "view" | "window" | "search" | "batch" | "repo-docs";
+  component?: "mla" | "mse" | "combined" | "view" | "window" | "search" | "batch" | "repo-docs"
+    | "timeline";
   counts?: OperationalCounts;
   errorCategory?: OperationalErrorCategory;
   errorStage?: OperationalErrorStage;

@@ -108,12 +108,80 @@ test("extracts source-backed runtime facts and filters them by time", async () =
     "First",
     "Second",
   ]);
+  expect(complete.details.taskTimelines.map((timeline) => timeline.name)).toEqual(["First", "Second"]);
+  expect(complete.details.taskTimelines[0]).toMatchObject({
+    executionId: expect.any(String),
+    taskId: 1,
+    name: "First",
+    status: "succeeded",
+    endedAt: expect.any(String),
+  });
+  expect(complete.details.taskTimelines[0]?.entries).toEqual([
+    { ts: expect.any(String), event: "success", node: "FirstNode" },
+  ]);
+  expect(complete.details.taskTimelines[1]?.entries).toEqual([
+    { ts: expect.any(String), event: "timeout", node: "SecondNode" },
+  ]);
   expect(focused.details.runtime.sessions[0]?.tasks.map((task) => task.name)).toEqual(["First"]);
+  expect(focused.details.taskTimelines.map((timeline) => timeline.name)).toEqual(["First"]);
   expect(focused.evidence.every((item) => item.source.artifactId === focused.artifacts[0]?.id)).toBe(true);
   expect(focused.evidence.some((item) => item.kind === "mla.task")).toBe(true);
   expect(focused.warnings.some((item) => item.code === "mla_time_window_file_granularity")).toBe(true);
   expect(renderText(focused)).toContain("First: succeeded");
   expect(renderText(focused)).not.toContain("Second: failed");
+});
+
+test("correlates timelines for repeated task ids by task start time", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "mek-mla-repeated-"));
+  temporaryRoots.push(root);
+  const log = path.join(root, "maafw.log");
+  await writeFile(log, [
+    "[2026-07-19 10:00:00.000][DBG][Px1][Tx1][Logger] MAA Process Start",
+    event("2026-07-19 10:01:00.000", "Tasker.Task.Starting", {
+      task_id: 1, entry: "Repeat", hash: "h1", uuid: "u1",
+    }),
+    event("2026-07-19 10:01:01.000", "Node.PipelineNode.Starting", {
+      task_id: 1, node_id: 11, name: "FirstRunNode",
+    }),
+    event("2026-07-19 10:01:02.000", "Node.PipelineNode.Succeeded", {
+      task_id: 1, node_id: 11, name: "FirstRunNode",
+    }),
+    event("2026-07-19 10:01:03.000", "Tasker.Task.Succeeded", {
+      task_id: 1, entry: "Repeat", hash: "h1", uuid: "u1",
+    }),
+    event("2026-07-19 12:01:00.000", "Tasker.Task.Starting", {
+      task_id: 1, entry: "Repeat", hash: "h1", uuid: "u1",
+    }),
+    event("2026-07-19 12:01:01.000", "Node.PipelineNode.Starting", {
+      task_id: 1, node_id: 12, name: "SecondRunNode",
+    }),
+    event("2026-07-19 12:01:02.000", "Node.PipelineNode.Failed", {
+      task_id: 1, node_id: 12, name: "SecondRunNode",
+    }),
+    event("2026-07-19 12:01:03.000", "Tasker.Task.Failed", {
+      task_id: 1, entry: "Repeat", hash: "h1", uuid: "u1",
+    }),
+  ].join("\n"), "utf8");
+
+  const complete = await inspectMla(log);
+  expect(complete.details.taskTimelines).toHaveLength(2);
+  const byStart = new Map(
+    complete.details.taskTimelines.map((timeline) => [timeline.startedAt, timeline]),
+  );
+  expect(byStart.get("2026-07-19 10:01:00.000")?.entries.map((entry) => entry.node))
+    .toEqual(["FirstRunNode"]);
+  expect(byStart.get("2026-07-19 12:01:00.000")?.entries.map((entry) => entry.node))
+    .toEqual(["SecondRunNode"]);
+  expect(byStart.get("2026-07-19 10:01:00.000")?.status).toBe("succeeded");
+  expect(byStart.get("2026-07-19 12:01:00.000")?.status).toBe("failed");
+
+  const focused = await inspectMla(log, {
+    timeRange: { from: "2026-07-19 11:00:00", to: "2026-07-19 13:00:00" },
+  });
+  expect(focused.details.taskTimelines).toHaveLength(1);
+  expect(focused.details.taskTimelines[0]?.startedAt).toBe("2026-07-19 12:01:00.000");
+  expect(focused.details.taskTimelines[0]?.entries.map((entry) => entry.node))
+    .toEqual(["SecondRunNode"]);
 });
 
 test("extracts ordered pipeline overrides and maps a context to its task", async () => {

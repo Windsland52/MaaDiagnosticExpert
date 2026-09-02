@@ -110,6 +110,10 @@ maa-evidence repo-docs C:\path\to\issue-checkout --format json
 # 从已有结果中读取某条证据及其来源上下文
 maa-evidence view --input inspection.json --evidence-id evidence-abc123 --format text
 maa-evidence window --input inspection.json --evidence-id evidence-abc123
+
+# 每任务的“时间 事件 节点名”压缩时间线（可按任务名过滤）
+maa-evidence timeline --input inspection.json --format text
+maa-evidence timeline --input inspection.json --task Combat --format text
 ```
 
 ## SDK

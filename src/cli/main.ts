@@ -24,6 +24,7 @@ import {
   renderEvidence,
   renderEvidenceSearch,
   renderInspectionSummary,
+  renderTaskTimeline,
   resolveMse,
   searchEvidence,
   setTelemetryEnabled,
@@ -54,6 +55,7 @@ Usage:
   maa-evidence view --input result.json [--evidence-id ID] --format json|text|mermaid
   maa-evidence search --input result.json [--artifact-id ID] [--kind KIND] [--node NODE] [--task TASK] [--text TEXT] [--from ISO] [--to ISO] [--limit N] [--format json|text]
   maa-evidence batch --input result.json --requests queries.json
+  maa-evidence timeline --input result.json [--task NAME] [--format json|text]
   maa-evidence telemetry status|enable|disable
   maa-evidence feedback --message TEXT [--category blocker|bug|suggestion|other] [--component mla|mse|discovery|views|other] [--attachment FILE]
 
@@ -282,6 +284,18 @@ async function runSearch(parsed: ParsedArguments): Promise<void> {
   await emit(rendered, option(parsed, "--output"));
 }
 
+async function runTimeline(parsed: ParsedArguments): Promise<void> {
+  const result = await readInspection(option(parsed, "--input") ?? "");
+  const format = option(parsed, "--format") ?? (process.stdout.isTTY ? "text" : "json");
+  if (format !== "json" && format !== "text") {
+    throw new UsageError("timeline --format must be json or text.");
+  }
+  const rendered = profileStageSync("render", () => renderTaskTimeline(result, format, {
+    tasks: options(parsed, "--task"),
+  }));
+  await emit(rendered, option(parsed, "--output"));
+}
+
 async function runBatch(parsed: ParsedArguments): Promise<void> {
   const result = await readInspection(option(parsed, "--input") ?? "");
   const requests = await profileStage("batch.requests_load", () =>
@@ -388,7 +402,8 @@ function countsFromInspection(result: InspectionResult): OperationalCounts {
 
 async function withOperationalTelemetry(
   command: string,
-  component: "mla" | "mse" | "combined" | "view" | "window" | "search" | "batch" | "repo-docs",
+  component: "mla" | "mse" | "combined" | "view" | "window" | "search" | "batch" | "repo-docs"
+    | "timeline",
   operation: () => Promise<InspectionResult | void>,
 ): Promise<void> {
   const startedAt = performance.now();
@@ -404,7 +419,7 @@ async function withOperationalTelemetry(
   } catch (error: unknown) {
     const errorStage: OperationalErrorStage = component === "repo-docs"
       ? "repository_scan"
-      : ["window", "view", "search", "batch"].includes(component)
+      : ["window", "view", "search", "batch", "timeline"].includes(component)
         ? "evidence_query"
         : "inspection";
     await recordOperationalTelemetry({
@@ -422,7 +437,8 @@ async function withOperationalTelemetry(
 async function runOperationalCommand(
   parsed: ParsedArguments,
   command: string,
-  component: "mla" | "mse" | "combined" | "view" | "window" | "search" | "batch" | "repo-docs",
+  component: "mla" | "mse" | "combined" | "view" | "window" | "search" | "batch" | "repo-docs"
+    | "timeline",
   operation: () => Promise<InspectionResult | void>,
 ): Promise<void> {
   await withLocalProfile(command, parsed, () =>
@@ -477,6 +493,10 @@ export async function main(args: string[] = process.argv.slice(2)): Promise<numb
       case "batch":
         rejectUnexpectedPositionals(parsed, 1);
         await runOperationalCommand(parsed, "batch", "batch", () => runBatch(parsed));
+        return 0;
+      case "timeline":
+        rejectUnexpectedPositionals(parsed, 1);
+        await runOperationalCommand(parsed, "timeline", "timeline", () => runTimeline(parsed));
         return 0;
       case "telemetry":
         rejectUnexpectedPositionals(parsed, 2);

@@ -103,6 +103,12 @@ bounds the first read and keeps REPORT consumable by `search`, `view`, and `wind
 and repeated `mla.signal` node segments) with `total`/`omitted`, so follow-ups can go straight to
 `view --evidence-id` instead of a discovery search round trip.
 
+To reconstruct how one task unfolded, use the compressed task timeline instead of rebuilding the
+node event sequence by hand: `maa-evidence timeline --input REPORT --task TaskName --format text`
+prints each task's "time event node" rows straight from the inspection. JSON output exposes the
+same rows (`ts`/`event`/`node`, with `event` distinguishing success, failed, running, recognition
+timeout, and action-failed).
+
 For common follow-ups, prefer a single batch:
 
 ```json

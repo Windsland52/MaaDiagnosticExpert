@@ -237,3 +237,23 @@ test("reports a missing repository-docs source as an actionable usage error", as
   expect(errorOutput).toContain(`Input path not found: ${path.resolve(missing)}`);
 });
 
+test("renders a task timeline from a saved inspection report", async () => {
+  const root = await mlaFixture();
+  const reportPath = path.join(root, "report.json");
+  let output = "";
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    output += String(chunk);
+    return true;
+  });
+
+  expect(await main(["mla", "inspect", root, "--output", reportPath])).toBe(0);
+  expect(await main(["timeline", "--input", reportPath, "--format", "json"])).toBe(0);
+  const parsed = JSON.parse(output) as { schemaVersion: string; tasks: Array<{ name: string; entries: unknown[] }> };
+  expect(parsed.schemaVersion).toBe("maa-evidence-task-timeline/v1");
+  expect(parsed.tasks.map((task) => task.name)).toEqual(["Combat"]);
+
+  output = "";
+  expect(await main(["timeline", "--input", reportPath, "--format", "text", "--task", "Combat"])).toBe(0);
+  expect(output).toContain("Task Combat [failed]");
+  expect(output).not.toContain("Task Collect");
+});

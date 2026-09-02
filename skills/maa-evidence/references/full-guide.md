@@ -408,6 +408,7 @@ maa-evidence search --input inspection.json `
   --limit 20
 maa-evidence view --input inspection.json --evidence-id evidence-abc123 --format json
 maa-evidence view --input inspection.json --evidence-id evidence-abc123 --format text
+maa-evidence timeline --input inspection.json --task TaskName --format text
 ```
 
 When one follow-up needs two or more independent queries against the same saved inspection, prefer
