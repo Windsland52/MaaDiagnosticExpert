@@ -41,3 +41,4 @@ export {
   type EvidenceSearchQuery,
   type EvidenceSearchResult,
 } from "./search.js";
+export { UsageError, errnoCode, isMissingPathError } from "./usage-error.js";

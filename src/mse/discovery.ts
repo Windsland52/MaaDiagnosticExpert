@@ -1,7 +1,7 @@
 import { opendir, stat } from "node:fs/promises";
 import path from "node:path";
 
-import type { InspectionWarning } from "../evidence/index.js";
+import { UsageError, isMissingPathError, type InspectionWarning } from "../evidence/index.js";
 
 const MAX_SCANNED_FILES = 10_000;
 const MAX_PROJECTS = 8;
@@ -49,7 +49,13 @@ function rootForInterface(interfacePath: string): string {
 
 export async function discoverMseProjects(inputPath: string): Promise<MseProjectDiscovery> {
   const resolved = path.resolve(inputPath);
-  const metadata = await stat(resolved);
+  let metadata;
+  try {
+    metadata = await stat(resolved);
+  } catch (error: unknown) {
+    if (isMissingPathError(error)) throw new UsageError(`Input path not found: ${resolved}`);
+    throw error;
+  }
   const initialRoot = metadata.isDirectory() ? resolved : path.dirname(resolved);
   const direct = await existingInterface(initialRoot);
   if (direct !== null) {

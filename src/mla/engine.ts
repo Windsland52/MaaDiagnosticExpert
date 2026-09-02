@@ -15,8 +15,10 @@ import {
 import {
   EVIDENCE_SCHEMA_VERSION,
   EvidenceLedger,
+  UsageError,
   artifactId,
   findCrossArtifactDuplicateObservations,
+  isMissingPathError,
   parseTimestamp,
   portablePath,
   type Artifact,
@@ -2320,9 +2322,15 @@ export async function inspectMla(
 ): Promise<MlaInspectionResult> {
   validateTimeRange(options.timeRange);
   const resolvedPath = path.resolve(inputPath);
-  const metadata = await stat(resolvedPath);
+  let metadata;
+  try {
+    metadata = await stat(resolvedPath);
+  } catch (error: unknown) {
+    if (isMissingPathError(error)) throw new UsageError(`Input path not found: ${resolvedPath}`);
+    throw error;
+  }
   if (!metadata.isDirectory() && resolvedPath.toLowerCase().endsWith(".zip")) {
-    throw new Error("Archive extraction belongs to the calling harness; pass the extracted directory.");
+    throw new UsageError("Archive extraction belongs to the calling harness; pass the extracted directory.");
   }
   const discovery = await profileStage("mla.discovery", () => discoverArtifacts(resolvedPath));
   const focus = focusFromOptions(options);

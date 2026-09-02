@@ -1,6 +1,8 @@
 import { readdir, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 
+import { UsageError } from "../evidence/index.js";
+
 import {
   FsContentLoader,
   InterfaceBundle,
@@ -533,7 +535,7 @@ export async function runMseProjectPreflight(
 ): Promise<MseProjectPreflightResult> {
   const projectRoot = path.resolve(targetPath);
   if (!(await isDirectory(projectRoot))) {
-    throw new Error("MSE project path is not a directory: " + projectRoot);
+    throw new UsageError("MSE project path is not a directory: " + projectRoot);
   }
   const confinement = new ProjectRootConfinement(projectRoot);
   if (!(await confinement.isAllowed(projectRoot))) {
@@ -801,11 +803,11 @@ export async function runMseTaskResolution(
   const tasks = [...new Set(requestedTasks.map((item) => item.trim()))]
     .filter((item) => item.length > 0);
   if (tasks.length === 0) {
-    throw new Error("MSE task resolution requires at least one task name.");
+    throw new UsageError("MSE task resolution requires at least one task name.");
   }
   const projectRoot = path.resolve(targetPath);
   if (!(await isDirectory(projectRoot))) {
-    throw new Error("MSE project path is not a directory: " + projectRoot);
+    throw new UsageError("MSE project path is not a directory: " + projectRoot);
   }
   const confinement = new ProjectRootConfinement(projectRoot);
   if (!(await confinement.isAllowed(projectRoot))) {

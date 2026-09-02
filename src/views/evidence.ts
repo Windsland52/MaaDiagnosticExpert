@@ -1,4 +1,4 @@
-import type { Evidence } from "../evidence/index.js";
+import { UsageError, type Evidence } from "../evidence/index.js";
 
 export type EvidenceViewFormat = "json" | "text";
 
@@ -34,6 +34,6 @@ export function evidenceById(
   evidenceId: string,
 ): Evidence {
   const record = records.find((item) => item.id === evidenceId);
-  if (record === undefined) throw new Error(`Unknown evidence ID: ${evidenceId}`);
+  if (record === undefined) throw new UsageError(`Unknown evidence ID: ${evidenceId}`);
   return record;
 }

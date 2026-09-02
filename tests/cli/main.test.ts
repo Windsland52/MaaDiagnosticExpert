@@ -134,3 +134,78 @@ test("rejects Mermaid output for repository documentation inventory", async () =
   await expect(main(["repo-docs", ".", "--format", "mermaid"])).resolves.toBe(1);
   expect(errorOutput).toContain("repo-docs --format must be json or text");
 });
+
+test("reports a missing input path as an actionable usage error", async () => {
+  const root = await mlaFixture();
+  const missing = path.join(root, "does-not-exist");
+  let errorOutput = "";
+  vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+    errorOutput += String(chunk);
+    return true;
+  });
+
+  await expect(main(["mla", "inspect", missing])).resolves.toBe(1);
+  expect(errorOutput).toContain(`Input path not found: ${missing}`);
+});
+
+test("reports a missing inspection file as an actionable usage error", async () => {
+  const missing = path.join("no-such-directory", "inspection.json");
+  let errorOutput = "";
+  vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+    errorOutput += String(chunk);
+    return true;
+  });
+
+  await expect(main(["window", "--input", missing])).resolves.toBe(1);
+  expect(errorOutput).toContain(`Input file not found: ${missing}`);
+});
+
+test("reports a missing output directory as an actionable usage error", async () => {
+  const root = await mlaFixture();
+  const output = path.join(root, "no-such-dir", "report.json");
+  let errorOutput = "";
+  vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+    errorOutput += String(chunk);
+    return true;
+  });
+
+  await expect(main(["mla", "inspect", root, "--output", output])).resolves.toBe(1);
+  expect(errorOutput).toContain(`Output directory does not exist: ${path.join(root, "no-such-dir")}`);
+});
+
+test("reports a directory input path as an actionable usage error", async () => {
+  const root = await mlaFixture();
+  let errorOutput = "";
+  vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+    errorOutput += String(chunk);
+    return true;
+  });
+
+  await expect(main(["window", "--input", root])).resolves.toBe(1);
+  expect(errorOutput).toContain(`Input path is not a file: ${root}`);
+});
+
+test("reports a directory output path as an actionable usage error", async () => {
+  const root = await mlaFixture();
+  let errorOutput = "";
+  vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+    errorOutput += String(chunk);
+    return true;
+  });
+
+  await expect(main(["mla", "inspect", root, "--output", root])).resolves.toBe(1);
+  expect(errorOutput).toContain(`Output path is a directory: ${root}`);
+});
+
+test("reports a missing repository-docs source as an actionable usage error", async () => {
+  const missing = path.join("no-such-directory", "checkout");
+  let errorOutput = "";
+  vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+    errorOutput += String(chunk);
+    return true;
+  });
+
+  await expect(main(["repo-docs", missing])).resolves.toBe(1);
+  expect(errorOutput).toContain(`Input path not found: ${path.resolve(missing)}`);
+});
+

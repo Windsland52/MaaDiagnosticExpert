@@ -23,6 +23,7 @@ vi.mock("@sentry/node", () => sentry);
 vi.mock("../../src/feedback/installation.js", () => installation);
 
 import {
+  UsageError,
   getTelemetryStatus,
   operationalTelemetryEligible,
   previewFeedback,
@@ -70,7 +71,7 @@ test("operational telemetry uses a bounded flush budget", async () => {
   });
 
   expect(OPERATIONAL_TELEMETRY_FLUSH_TIMEOUT_MS).toBe(200);
-  expect(OPERATIONAL_TELEMETRY_SCHEMA_VERSION).toBe("2");
+  expect(OPERATIONAL_TELEMETRY_SCHEMA_VERSION).toBe("3");
   const flushTimeout = sentry.flush.mock.calls.at(-1)?.[0] as number | undefined;
   expect(flushTimeout).toBeDefined();
   expect(flushTimeout).toBeGreaterThanOrEqual(0);
@@ -81,7 +82,7 @@ test("operational telemetry uses a bounded flush budget", async () => {
     tags: expect.objectContaining({
       duration_bucket: "lt_100ms",
       evidence_bucket: "10_to_99",
-      telemetry_schema: "2",
+      telemetry_schema: "3",
     }),
   }));
   expect(sentry.init).toHaveBeenCalledWith(expect.objectContaining({
@@ -137,6 +138,7 @@ test("operational errors use bounded categories and fingerprints without message
   expect(classifyOperationalError(Object.assign(new Error("private path"), { code: "ENOENT" })))
     .toBe("input_not_found");
   expect(classifyOperationalError(new SyntaxError("private input"))).toBe("invalid_input");
+  expect(classifyOperationalError(new UsageError("private usage"))).toBe("invalid_input");
   expect(classifyOperationalError(new Error("private failure"))).toBe("operation_failed");
 });
 

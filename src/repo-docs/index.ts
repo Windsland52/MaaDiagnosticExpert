@@ -4,7 +4,9 @@ import path from "node:path";
 import {
   EVIDENCE_SCHEMA_VERSION,
   EvidenceLedger,
+  UsageError,
   artifactId,
+  isMissingPathError,
   relativePortablePath,
   type Artifact,
   type EvidenceSource,
@@ -361,11 +363,12 @@ export async function inspectRepositoryDocs(sourceRoot: string): Promise<Reposit
   let rootMetadata;
   try {
     rootMetadata = await lstat(resolved);
-  } catch {
-    throw new Error(`Repository docs source is not a directory: ${resolved}`);
+  } catch (error: unknown) {
+    if (isMissingPathError(error)) throw new UsageError(`Input path not found: ${resolved}`);
+    throw error;
   }
   if (rootMetadata.isSymbolicLink() || !rootMetadata.isDirectory()) {
-    throw new Error(`Repository docs source is not a non-symbolic directory: ${resolved}`);
+    throw new UsageError(`Repository docs source is not a non-symbolic directory: ${resolved}`);
   }
   const rootReal = await realpath(resolved);
   const scan = await scanRepository(rootReal);

@@ -4,6 +4,7 @@ import path from "node:path";
 import { createInterface } from "node:readline";
 
 import type { InspectionResult } from "./types.js";
+import { UsageError } from "./usage-error.js";
 
 export const EVIDENCE_WINDOW_SCHEMA_VERSION = "maa-evidence-window/v1" as const;
 
@@ -31,7 +32,7 @@ export type EvidenceWindow = {
 function boundedInteger(value: number | undefined, fallback: number, minimum: number, maximum: number): number {
   if (value === undefined) return fallback;
   if (!Number.isInteger(value) || value < minimum || value > maximum) {
-    throw new Error(`Expected an integer from ${minimum} through ${maximum}, received ${value}.`);
+    throw new UsageError(`Expected an integer from ${minimum} through ${maximum}, received ${value}.`);
   }
   return value;
 }
@@ -83,7 +84,7 @@ export async function queryEvidenceWindow(
     ? undefined
     : inspection.evidence.find((item) => item.id === query.evidenceId);
   if (query.evidenceId !== undefined && evidence === undefined) {
-    throw new Error(`Unknown evidence ID: ${query.evidenceId}`);
+    throw new UsageError(`Unknown evidence ID: ${query.evidenceId}`);
   }
   const targetArtifactId = query.artifactId ?? evidence?.source.artifactId;
   if (targetArtifactId === undefined) {

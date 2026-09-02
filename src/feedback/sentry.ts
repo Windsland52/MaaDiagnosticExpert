@@ -1,12 +1,13 @@
 import * as Sentry from "@sentry/node";
 
+import { UsageError } from "../evidence/index.js";
 import { MAA_EVIDENCE_VERSION } from "../version.js";
 import { getOrCreateInstallationId } from "./installation.js";
 
 const DEFAULT_SENTRY_DSN =
   "https://ed349e23de6a10cf40c71af3ec19c730@o4511840769277952.ingest.us.sentry.io/4511840804929536";
 export const OPERATIONAL_TELEMETRY_FLUSH_TIMEOUT_MS = 200;
-export const OPERATIONAL_TELEMETRY_SCHEMA_VERSION = "2" as const;
+export const OPERATIONAL_TELEMETRY_SCHEMA_VERSION = "3" as const;
 const ALLOWED_TAGS = new Set([
   "arch",
   "category",
@@ -164,6 +165,7 @@ function errnoCode(error: unknown): string | undefined {
 }
 
 export function classifyOperationalError(error: unknown): OperationalErrorCategory {
+  if (error instanceof UsageError) return "invalid_input";
   const code = errnoCode(error);
   if (code === "ENOENT" || code === "ENOTDIR") return "input_not_found";
   if (code === "EACCES" || code === "EPERM") return "permission_denied";

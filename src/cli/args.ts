@@ -1,3 +1,5 @@
+import { UsageError } from "../evidence/index.js";
+
 export type ParsedArguments = {
   positionals: string[];
   options: Map<string, string[]>;
@@ -120,6 +122,6 @@ export function integerOption(parsed: ParsedArguments, name: string): number | u
   const value = option(parsed, name);
   if (value === undefined) return undefined;
   const parsedValue = Number(value);
-  if (!Number.isInteger(parsedValue)) throw new Error(`${name} requires an integer.`);
+  if (!Number.isInteger(parsedValue)) throw new UsageError(`${name} requires an integer.`);
   return parsedValue;
 }

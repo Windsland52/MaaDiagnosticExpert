@@ -13,6 +13,7 @@ import {
   getTelemetryStatus,
   previewFeedback,
   queryEvidenceBatch,
+  UsageError,
   type FeedbackCategory,
   type OperationalCounts,
   type OperationalErrorStage,
@@ -71,7 +72,7 @@ narrow the window with --from/--to, before reading or piping a complete result.
 
 function requirePositional(parsed: ParsedArguments, index: number, label: string): string {
   const value = parsed.positionals[index];
-  if (value === undefined) throw new Error(`Missing ${label}.`);
+  if (value === undefined) throw new UsageError(`Missing ${label}.`);
   return value;
 }
 
@@ -85,7 +86,7 @@ function timeRange(parsed: ParsedArguments): TimeRange | undefined {
 function syntaxMode(parsed: ParsedArguments): MseSyntaxMode {
   const value = option(parsed, "--syntax-mode") ?? "maafw";
   if (value !== "maafw" && value !== "maa") {
-    throw new Error("--syntax-mode must be maafw or maa.");
+    throw new UsageError("--syntax-mode must be maafw or maa.");
   }
   return value;
 }
@@ -93,7 +94,7 @@ function syntaxMode(parsed: ParsedArguments): MseSyntaxMode {
 function rejectUnexpectedPositionals(parsed: ParsedArguments, expected: number): void {
   const unexpected = parsed.positionals.slice(expected);
   if (unexpected.length === 0) return;
-  throw new Error(
+  throw new UsageError(
     `Unexpected positional arguments: ${unexpected.map((value) => JSON.stringify(value)).join(", ")}.`,
   );
 }
@@ -101,7 +102,7 @@ function rejectUnexpectedPositionals(parsed: ParsedArguments, expected: number):
 function mseCommand(parsed: ParsedArguments): "inspect" | "resolve" {
   const value = requirePositional(parsed, 1, "MSE command");
   if (value !== "inspect" && value !== "resolve") {
-    throw new Error("The MSE namespace supports 'inspect' and 'resolve'.");
+    throw new UsageError("The MSE namespace supports 'inspect' and 'resolve'.");
   }
   return value;
 }
@@ -109,7 +110,7 @@ function mseCommand(parsed: ParsedArguments): "inspect" | "resolve" {
 function outputFormat(parsed: ParsedArguments): ViewFormat {
   const value = option(parsed, "--format") ?? (process.stdout.isTTY ? "text" : "json");
   if (value !== "json" && value !== "text" && value !== "mermaid") {
-    throw new Error("--format must be json, text, or mermaid.");
+    throw new UsageError("--format must be json, text, or mermaid.");
   }
   return value;
 }
@@ -117,7 +118,7 @@ function outputFormat(parsed: ParsedArguments): ViewFormat {
 async function emitInspection(result: InspectionResult, parsed: ParsedArguments): Promise<void> {
   const format = outputFormat(parsed);
   if (flag(parsed, "--summary")) {
-    if (format === "mermaid") throw new Error("--summary supports --format json or text.");
+    if (format === "mermaid") throw new UsageError("--summary supports --format json or text.");
     const summary = profileStageSync("render", () => renderInspectionSummary(result, format));
     await emit(summary, option(parsed, "--output"));
     return;
@@ -128,7 +129,7 @@ async function emitInspection(result: InspectionResult, parsed: ParsedArguments)
 
 async function runMla(parsed: ParsedArguments): Promise<InspectionResult> {
   if (requirePositional(parsed, 1, "MLA command") !== "inspect") {
-    throw new Error("The MLA namespace currently supports only 'inspect'.");
+    throw new UsageError("The MLA namespace currently supports only 'inspect'.");
   }
   const range = timeRange(parsed);
   const result = await inspectMla(requirePositional(parsed, 2, "input path"), {
@@ -166,7 +167,7 @@ async function runMse(parsed: ParsedArguments): Promise<InspectionResult> {
 
 async function runRepoDocs(parsed: ParsedArguments): Promise<InspectionResult> {
   const format = option(parsed, "--format");
-  if (format === "mermaid") throw new Error("repo-docs --format must be json or text.");
+  if (format === "mermaid") throw new UsageError("repo-docs --format must be json or text.");
   const result = await inspectRepositoryDocs(requirePositional(parsed, 1, "checkout path"));
   await emitInspection(result, parsed);
   return result;
@@ -175,7 +176,7 @@ async function runRepoDocs(parsed: ParsedArguments): Promise<InspectionResult> {
 async function runCombined(parsed: ParsedArguments): Promise<InspectionResult> {
   const range = timeRange(parsed);
   if (flag(parsed, "--referencers") && flag(parsed, "--no-referencers")) {
-    throw new Error("--referencers and --no-referencers cannot be used together.");
+    throw new UsageError("--referencers and --no-referencers cannot be used together.");
   }
   const includeReferencers = flag(parsed, "--referencers")
     ? true
@@ -232,7 +233,7 @@ async function runWindow(parsed: ParsedArguments): Promise<void> {
   }));
   const format = option(parsed, "--format") ?? "json";
   if (format !== "json" && format !== "text") {
-    throw new Error("window --format must be json or text.");
+    throw new UsageError("window --format must be json or text.");
   }
   const rendered = profileStageSync("render", () => renderEvidenceWindow(evidenceWindow, format));
   await emit(rendered, option(parsed, "--output"));
@@ -247,7 +248,7 @@ async function runView(parsed: ParsedArguments): Promise<void> {
     await emit(rendered, option(parsed, "--output"));
     return;
   }
-  if (format === "mermaid") throw new Error("view --evidence-id supports only json or text.");
+  if (format === "mermaid") throw new UsageError("view --evidence-id supports only json or text.");
   const evidence = profileStageSync("evidence.view", () => evidenceById(result.evidence, evidenceId));
   const rendered = profileStageSync("render", () => renderEvidence(evidence, format));
   await emit(rendered, option(parsed, "--output"));
@@ -266,7 +267,7 @@ async function runSearch(parsed: ParsedArguments): Promise<void> {
     ...(integerOption(parsed, "--limit") === undefined ? {} : { limit: integerOption(parsed, "--limit") as number }),
   }));
   const format = option(parsed, "--format") ?? (process.stdout.isTTY ? "text" : "json");
-  if (format !== "json" && format !== "text") throw new Error("search --format must be json or text.");
+  if (format !== "json" && format !== "text") throw new UsageError("search --format must be json or text.");
   const rendered = profileStageSync("render", () => renderEvidenceSearch(search, format));
   await emit(rendered, option(parsed, "--output"));
 }
@@ -291,13 +292,13 @@ async function runTelemetry(parsed: ParsedArguments): Promise<void> {
     await emit(JSON.stringify({ status: action === "enable" ? "enabled" : "disabled" }, null, 2), option(parsed, "--output"));
     return;
   }
-  throw new Error("telemetry action must be status, enable, or disable.");
+  throw new UsageError("telemetry action must be status, enable, or disable.");
 }
 
 function feedbackComponent(parsed: ParsedArguments): "mla" | "mse" | "discovery" | "views" | "other" {
   const component = option(parsed, "--component") ?? "other";
   if (!["mla", "mse", "discovery", "views", "other"].includes(component)) {
-    throw new Error("--component must be mla, mse, discovery, views, or other.");
+    throw new UsageError("--component must be mla, mse, discovery, views, or other.");
   }
   return component as "mla" | "mse" | "discovery" | "views" | "other";
 }
@@ -305,14 +306,14 @@ function feedbackComponent(parsed: ParsedArguments): "mla" | "mse" | "discovery"
 function feedbackCategory(parsed: ParsedArguments): FeedbackCategory {
   const value = option(parsed, "--category") ?? "other";
   if (!["blocker", "bug", "suggestion", "other"].includes(value)) {
-    throw new Error("--category must be blocker, bug, suggestion, or other.");
+    throw new UsageError("--category must be blocker, bug, suggestion, or other.");
   }
   return value as FeedbackCategory;
 }
 
 async function runFeedback(parsed: ParsedArguments): Promise<void> {
   const message = option(parsed, "--message");
-  if (message === undefined) throw new Error("feedback requires --message.");
+  if (message === undefined) throw new UsageError("feedback requires --message.");
   const preview = await previewFeedback({
     message,
     category: feedbackCategory(parsed),
@@ -320,7 +321,7 @@ async function runFeedback(parsed: ParsedArguments): Promise<void> {
     attachmentPaths: options(parsed, "--attachment"),
   });
   if (!process.stdin.isTTY || !process.stderr.isTTY) {
-    throw new Error("Feedback submission requires an interactive terminal for per-submission confirmation.");
+    throw new UsageError("Feedback submission requires an interactive terminal for per-submission confirmation.");
   }
   process.stderr.write("\nFeedback preview\n");
   process.stderr.write(`Category: ${preview.category}\n`);
@@ -333,7 +334,7 @@ async function runFeedback(parsed: ParsedArguments): Promise<void> {
   const reader = createInterface({ input: process.stdin, output: process.stderr });
   try {
     const answer = await reader.question("Type UPLOAD to send this feedback to the MaaEvidenceKit Sentry project: ");
-    if (answer.trim() !== "UPLOAD") throw new Error("Feedback upload cancelled.");
+    if (answer.trim() !== "UPLOAD") throw new UsageError("Feedback upload cancelled.");
   } finally {
     reader.close();
   }
@@ -476,7 +477,7 @@ export async function main(args: string[] = process.argv.slice(2)): Promise<numb
         await runFeedback(parsed);
         return 0;
       default:
-        throw new Error(`Unknown command: ${requirePositional(parsed, 0, "command")}`);
+        throw new UsageError(`Unknown command: ${requirePositional(parsed, 0, "command")}`);
     }
   } catch (error: unknown) {
     process.stderr.write(`maa-evidence: ${error instanceof Error ? error.message : String(error)}\n`);
