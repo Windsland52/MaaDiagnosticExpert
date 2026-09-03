@@ -5,7 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.6.0] - 2026-09-03
+
+### Added
+
+- Add a per-task compressed node timeline to MLA inspections as `details.taskTimelines`
+  (`maa-evidence-task-timeline/v1`), built through the pinned maa-log-tools node execution timeline.
+  Each execution carries `time, event, node, matched recognition` entries classified into `success`,
+  `failed`, `running`, recognition `timeout`, and `action-failed`, so a harness no longer rebuilds
+  node sequences from raw logs. Task ids restart across framework sessions inside one bundle, so
+  kernel timelines correlate to runtime executions by `(task_id, start_time)` instead of a task-id
+  map that silently kept only the last occurrence, and the correlation stays correct under
+  time-range focus. The new `maa-evidence timeline` command renders the timeline as JSON or text
+  with an optional `--task` filter; non-MLA inspections are rejected as usage errors, and unknown
+  timeline events are dropped at the view boundary.
+- Embed a bounded `notableEvidence` block in inspection summaries: up to ten evidence identities
+  per actionable kind (`mla.task_anomaly`, `mla.outcome` with failures first, cycle exit blockers,
+  mirrored task groups, repeated node segments) plus `total`/`omitted`, deterministic in evidence
+  order. Summaries previously reported these kinds only as statistics counts, forcing a discovery
+  search round trip before any `view --evidence-id` follow-up.
+- Export `UsageError` and `errnoCode` through the SDK facade so SDK consumers can distinguish
+  caller-input failures from operational failures and classify them the same way operational
+  telemetry does.
+
+### Changed
+
+- `--output` now always receives the complete inspection document, and `--summary` only decides
+  what stdout shows. `mla inspect --summary --output F` previously wrote the bounded summary into
+  F, which `view`/`search`/`window` cannot consume and which forced a second full inspection; one
+  run now both bounds the first read and keeps the saved report drillable.
+- Make usage errors actionable and classify them as `invalid_input`: missing input paths, missing
+  inspection files, and missing `--output` directories fail with messages that name the offending
+  path instead of raw `ENOENT` text, directory inputs and outputs are rejected explicitly, and
+  caller-input validation (CLI argument checks, batch request parsing, unknown evidence IDs,
+  archive and directory guards) throws `UsageError`. Operational telemetry classifies these
+  expected failures as `invalid_input` instead of the `operation_failed` fallback; the operational
+  telemetry schema version is bumped to 3 for the changed `error_category` semantics.
 
 ## [0.5.0] - 2026-09-01
 
